@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BoilermakerGRC - Impostor Domain Monitor</title>
+    <meta name="description" content="Protect your brand with AI-powered Typosquatting and Punycode impostor domain monitoring.">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+
+    <div class="app-container glass-panel">
+        <header class="navbar">
+            <div class="logo">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                <span>BoilermakerGRC <span class="badge">Monitor</span></span>
+            </div>
+            <nav id="nav-menu" class="hidden">
+                <button id="nav-dashboard" class="nav-btn active">Dashboard</button>
+                <button id="nav-admin" class="nav-btn hidden">Admin</button>
+                <div class="user-block">
+                    <span id="user-display"></span>
+                    <button id="btn-logout" class="btn btn-secondary btn-sm">Sign Out</button>
+                </div>
+            </nav>
+        </header>
+
+        <main id="main-content">
+            <!-- Auth View -->
+            <section id="view-auth" class="view active">
+                <div class="auth-box">
+                    <h2>Welcome Back</h2>
+                    <p class="subtitle">Sign in to monitor your digital assets.</p>
+                    <form id="auth-form">
+                        <div class="input-group">
+                            <label for="email">Email Address</label>
+                            <input type="email" id="email" required placeholder="name@company.com">
+                        </div>
+                        <div class="input-group">
+                            <label for="password">Password</label>
+                            <input type="password" id="password" required placeholder="••••••••">
+                        </div>
+                        <button type="submit" id="btn-login" class="btn btn-primary w-full">Sign In</button>
+                        <button type="button" id="btn-register" class="btn btn-ghost w-full">Create Account</button>
+                        <div id="auth-error" class="error-msg hidden"></div>
+                    </form>
+                </div>
+            </section>
+
+            <!-- User Dashboard View -->
+            <section id="view-dashboard" class="view hidden">
+                <div class="dashboard-header">
+                    <div>
+                        <h2>Your Monitored Domains</h2>
+                        <p class="subtitle">Add domains to automatically generate and scan for impostors.</p>
+                    </div>
+                    <form id="add-domain-form" class="add-domain-form">
+                        <input type="text" id="new-domain" required placeholder="example.com">
+                        <button type="submit" class="btn btn-primary">Add Domain</button>
+                    </form>
+                </div>
+                
+                <div class="grid" id="domains-grid">
+                    <!-- Domain Cards Populated via JS -->
+                    <div class="empty-state">Loading your domains...</div>
+                </div>
+
+                <div class="impostors-section mt-8">
+                    <h3>Resolved Impostors <span class="badge error" id="impostor-count">0</span></h3>
+                    <div class="table-container">
+                        <table id="impostors-table">
+                            <thead>
+                                <tr>
+                                    <th>Impostor Domain</th>
+                                    <th>Original</th>
+                                    <th>Confidence</th>
+                                    <th>Detected Records</th>
+                                    <th>Last Scanned</th>
+                                </tr>
+                            </thead>
+                            <tbody id="impostors-tbody">
+                                <!-- Impostors Populated via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Admin View -->
+            <section id="view-admin" class="view hidden">
+                <h2>Admin Control Center</h2>
+                <p class="subtitle">Global overview of all monitored domains across all users.</p>
+                
+                <div class="table-container mt-4">
+                    <table id="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Domain</th>
+                                <th>Tracking Users (UIDs)</th>
+                                <th>Added Date</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-tbody">
+                            <!-- Admin Data Populated via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script type="module" src="app.js"></script>
+</body>
+</html>
