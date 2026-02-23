@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, LogOut, LayoutDashboard, Settings } from 'lucide-react';
+import { ShieldCheck, LogOut, LayoutDashboard, Settings, Eye, Download, RefreshCw, Activity, X } from 'lucide-react';
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -27,6 +27,14 @@ export default function App() {
   const [newDomain, setNewDomain] = useState('');
   const [userDomains, setUserDomains] = useState([]);
   const [impostors, setImpostors] = useState([]);
+  const [activeDomainFilter, setActiveDomainFilter] = useState(null);
+
+  // Popup / Generated Potentials State
+  const [isPopupOpen, setIsPopupOpen] = useState(false);
+  const [popupDomain, setPopupDomain] = useState(null);
+  const [popupData, setPopupData] = useState([]);
+  const [isPopupLoading, setIsPopupLoading] = useState(false);
+  const [selectedImpostors, setSelectedImpostors] = useState(new Set());
 
   // Admin State
   const [adminData, setAdminData] = useState([]);
@@ -56,6 +64,8 @@ export default function App() {
         setUserDomains([]);
         setImpostors([]);
         setAdminData([]);
+        setActiveDomainFilter(null);
+        setIsPopupOpen(false);
       }
     });
     return () => unsubscribe();
@@ -137,6 +147,87 @@ export default function App() {
     });
   };
 
+  // --- Popup & Export Logic ---
+  const openDomainPopup = async (domainStr) => {
+    setPopupDomain(domainStr);
+    setIsPopupOpen(true);
+    setIsPopupLoading(true);
+    setSelectedImpostors(new Set());
+
+    try {
+      const qImpostors = query(collection(db, 'generated_impostors'), where('original_domain', '==', domainStr));
+      const snap = await getDocs(qImpostors);
+      const data = [];
+      snap.forEach(d => data.push(d.data()));
+
+      // Sort by confidence highest first
+      data.sort((a, b) => b.confidence_level - a.confidence_level);
+      setPopupData(data);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to load potential domains.");
+    } finally {
+      setIsPopupLoading(false);
+    }
+  };
+
+  const toggleSelection = (impostorDomain) => {
+    const newSet = new Set(selectedImpostors);
+    if (newSet.has(impostorDomain)) {
+      newSet.delete(impostorDomain);
+    } else {
+      newSet.add(impostorDomain);
+    }
+    setSelectedImpostors(newSet);
+  };
+
+  const toggleAllSelected = () => {
+    if (selectedImpostors.size === popupData.length) {
+      setSelectedImpostors(new Set()); // deselect all
+    } else {
+      setSelectedImpostors(new Set(popupData.map(d => d.impostor_domain))); // select all
+    }
+  };
+
+  const exportPopupData = () => {
+    // If some are selected, export only those. Otherwise export all in the popup.
+    const toExport = selectedImpostors.size > 0
+      ? popupData.filter(d => selectedImpostors.has(d.impostor_domain))
+      : popupData;
+
+    if (toExport.length === 0) return;
+
+    // CSV Headers
+    const headers = ['Impostor Domain', 'Original Domain', 'Confidence Score', 'Resolved A', 'Resolved MX', 'Resolved TXT', 'Last Scanned', 'First Detected'];
+
+    const csvContent = [
+      headers.join(','),
+      ...toExport.map(row => {
+        return [
+          row.impostor_domain,
+          row.original_domain,
+          row.confidence_level,
+          row.records.A ? 'Yes' : 'No',
+          row.records.MX ? 'Yes' : 'No',
+          row.records.TXT ? 'Yes' : 'No',
+          row.last_scanned ? row.last_scanned.toDate().toISOString() : '',
+          row.first_detected_at ? row.first_detected_at.toDate().toISOString() : ''
+        ].join(',');
+      })
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `impostors_export_${popupDomain}_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // --- Auth Handlers ---
   const handleAuth = async (isLogin, e) => {
     e.preventDefault();
     setAuthError('');
@@ -195,11 +286,82 @@ export default function App() {
       <div className="blob blob-1"></div>
       <div className="blob blob-2"></div>
 
+      {/* Generated Potentials Modal */}
+      {isPopupOpen && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h3>Generated Potentials for: <span className="text-primary">{popupDomain}</span></h3>
+              <button onClick={() => setIsPopupOpen(false)} className="nav-btn"><X size={24} /></button>
+            </div>
+
+            <div className="modal-actions" style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
+              <button onClick={exportPopupData} className="btn btn-secondary btn-sm" disabled={popupData.length === 0}>
+                <Download size={14} className="inline mr-1 -mt-1" />
+                Export {selectedImpostors.size > 0 ? `Selected (${selectedImpostors.size})` : 'All'}
+              </button>
+              {/* Note: Regeneration and On-Demand resolving require backend endpoints in a production environment. 
+                   For this draft, we stub the actions. */}
+              <button onClick={() => alert("Regeneration request sent to backend via PubSub/HTTP trigger!")} className="btn btn-secondary btn-sm">
+                <RefreshCw size={14} className="inline mr-1 -mt-1" /> Regenerate List
+              </button>
+              <button onClick={() => alert("On-Demand resolve scan queued!")} className="btn btn-primary btn-sm">
+                <Activity size={14} className="inline mr-1 -mt-1" /> Run Manual Scan Now
+              </button>
+            </div>
+
+            <div className="table-container" style={{ maxHeight: '50vh', overflowY: 'auto' }}>
+              {isPopupLoading ? (
+                <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>Loading data...</div>
+              ) : (
+                <table>
+                  <thead>
+                    <tr>
+                      <th style={{ width: '40px' }}><input type="checkbox" onChange={toggleAllSelected} checked={popupData.length > 0 && selectedImpostors.size === popupData.length} /></th>
+                      <th>Impostor Domain</th>
+                      <th>Confidence</th>
+                      <th>Is Resolving</th>
+                      <th>Last Checked</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {popupData.length === 0 ? (
+                      <tr><td colSpan="5" className="empty-state">No generated potentials found yet.</td></tr>
+                    ) : (
+                      popupData.map(d => {
+                        const confColor = d.confidence_level > 70 ? 'var(--danger)' : (d.confidence_level > 40 ? '#d29922' : 'var(--success)');
+                        const isRes = d.records && (d.records.A || d.records.MX || d.records.TXT);
+                        return (
+                          <tr key={d.impostor_domain}>
+                            <td><input type="checkbox" checked={selectedImpostors.has(d.impostor_domain)} onChange={() => toggleSelection(d.impostor_domain)} /></td>
+                            <td>{d.impostor_domain}</td>
+                            <td><span style={{ color: confColor, fontWeight: 600 }}>{d.confidence_level}%</span></td>
+                            <td>
+                              {isRes ? <span className="badge error">Yes</span> : <span className="badge">No</span>}
+                            </td>
+                            <td className="subtitle" style={{ fontSize: '0.8rem' }}>
+                              {d.last_scanned ? d.last_scanned.toDate().toLocaleDateString() : 'N/A'}
+                            </td>
+                          </tr>
+                        )
+                      })
+                    )}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="app-container">
         <header className="navbar">
           <div className="logo">
             <ShieldCheck className="text-primary" />
-            <span>BoilermakerGRC <span className="badge">Monitor</span></span>
+            <div style={{ display: 'flex', flexDirection: 'column', lineHeight: '1.1' }}>
+              <span style={{ fontSize: '1.3rem' }}>Domain Monitor</span>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>by BoilermakerGRC</span>
+            </div>
           </div>
 
           {currentUser && (
@@ -285,19 +447,38 @@ export default function App() {
                   <div className="empty-state">No domains monitored yet. Add one above!</div>
                 ) : (
                   userDomains.map(d => (
-                    <div className="card" key={d.id}>
+                    <div
+                      className={`card ${activeDomainFilter === d.domain ? 'active-filter' : ''}`}
+                      key={d.id}
+                      onClick={() => setActiveDomainFilter(activeDomainFilter === d.domain ? null : d.domain)}
+                      style={{ cursor: 'pointer', position: 'relative' }}
+                    >
                       <div className="card-title">
                         <span>{d.domain}</span>
                         <span className="badge" style={{ background: 'var(--success-bg)', color: 'var(--success)' }}>Active</span>
                       </div>
                       <div className="subtitle mt-4" style={{ fontSize: '0.8rem' }}>Added: {d.createdAt ? d.createdAt.toDate().toLocaleDateString() : 'Just now'}</div>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); openDomainPopup(d.domain); }}
+                        className="btn btn-secondary btn-sm mt-4 w-full"
+                      >
+                        <Eye size={14} className="inline mr-1 -mt-1" /> View All Potentials
+                      </button>
                     </div>
                   ))
                 )}
               </div>
 
               <div className="impostors-section mt-8">
-                <h3>Resolved Impostors <span className="badge error">{impostors.length}</span></h3>
+                <h3>
+                  {activeDomainFilter ? `Resolved Impostors for ${activeDomainFilter}` : 'All Resolved Impostors'}
+                  <span className="badge error" style={{ marginLeft: '10px' }}>
+                    {impostors.filter(imp => activeDomainFilter ? imp.original_domain === activeDomainFilter : true).length}
+                  </span>
+                  {activeDomainFilter && (
+                    <button onClick={() => setActiveDomainFilter(null)} className="btn btn-ghost btn-sm" style={{ marginLeft: '10px' }}>Clear Filter</button>
+                  )}
+                </h3>
                 <div className="table-container">
                   <table>
                     <thead>
@@ -307,30 +488,39 @@ export default function App() {
                         <th>Confidence</th>
                         <th>Detected Records</th>
                         <th>Last Scanned</th>
+                        <th>First Registered</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {impostors.length === 0 ? (
-                        <tr><td colSpan="5" style={{ textAlign: 'center' }} className="subtitle">No resolving impostor domains detected yet.</td></tr>
+                      {impostors.filter(imp => activeDomainFilter ? imp.original_domain === activeDomainFilter : true).length === 0 ? (
+                        <tr><td colSpan="6" style={{ textAlign: 'center' }} className="subtitle">
+                          {activeDomainFilter ? `No resolving impostor domains detected for ${activeDomainFilter} yet.` : `No resolving impostor domains detected yet.`}
+                        </td></tr>
                       ) : (
-                        impostors.map(imp => {
-                          const confColor = imp.confidence_level > 70 ? 'var(--danger)' : (imp.confidence_level > 40 ? '#d29922' : 'var(--success)');
-                          return (
-                            <tr key={imp.impostor_domain}>
-                              <td style={{ fontWeight: 600, color: '#fff' }}>{imp.impostor_domain}</td>
-                              <td className="subtitle">{imp.original_domain}</td>
-                              <td><span style={{ color: confColor, fontWeight: 600 }}>{imp.confidence_level}%</span></td>
-                              <td>
-                                {imp.records.A && <span className="record-tag active">A/AAAA</span>}
-                                {imp.records.MX && <span className="record-tag active">MX</span>}
-                                {imp.records.TXT && <span className="record-tag active">TXT (SPF/DMARC)</span>}
-                              </td>
-                              <td className="subtitle" style={{ fontSize: '0.8rem' }}>
-                                {imp.last_scanned ? imp.last_scanned.toDate().toLocaleString() : 'N/A'}
-                              </td>
-                            </tr>
-                          )
-                        })
+                        impostors
+                          .filter(imp => activeDomainFilter ? imp.original_domain === activeDomainFilter : true)
+                          .map(imp => {
+                            const confColor = imp.confidence_level > 70 ? 'var(--danger)' : (imp.confidence_level > 40 ? '#d29922' : 'var(--success)');
+                            const isRes = imp.records && (imp.records.A || imp.records.MX || imp.records.TXT);
+                            return (
+                              <tr key={imp.impostor_domain}>
+                                <td style={{ fontWeight: 600, color: '#fff' }}>{imp.impostor_domain}</td>
+                                <td className="subtitle">{imp.original_domain}</td>
+                                <td><span style={{ color: confColor, fontWeight: 600 }}>{imp.confidence_level}%</span></td>
+                                <td>
+                                  {imp.records.A && <span className="record-tag active">A/AAAA</span>}
+                                  {imp.records.MX && <span className="record-tag active">MX</span>}
+                                  {imp.records.TXT && <span className="record-tag active">TXT (SPF/DMARC)</span>}
+                                </td>
+                                <td className="subtitle" style={{ fontSize: '0.8rem' }}>
+                                  {imp.last_scanned ? imp.last_scanned.toDate().toLocaleString() : 'N/A'}
+                                </td>
+                                <td className="subtitle" style={{ fontSize: '0.8rem' }}>
+                                  {imp.first_detected_at ? imp.first_detected_at.toDate().toLocaleDateString() : 'N/A'}
+                                </td>
+                              </tr>
+                            )
+                          })
                       )}
                     </tbody>
                   </table>
