@@ -45,3 +45,26 @@ export async function scanDomain(domain) {
 
     return results;
 }
+
+/**
+ * Fetches the actual domain registration date via the free ICANN RDAP protocol.
+ */
+export async function getRegistrationDate(domain) {
+    try {
+        // rdap.org acts as a free bootstrap router to find the correct TLD registry
+        const response = await fetch(`https://rdap.org/domain/${domain}`);
+        if (!response.ok) return null;
+
+        const data = await response.json();
+        if (data.events) {
+            const regEvent = data.events.find(e => e.eventAction === 'registration');
+            if (regEvent && regEvent.eventDate) {
+                return regEvent.eventDate;
+            }
+        }
+        return null;
+    } catch (err) {
+        console.warn(`RDAP lookup failed for ${domain}:`, err.message);
+        return null;
+    }
+}
