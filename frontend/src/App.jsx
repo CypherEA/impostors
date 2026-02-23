@@ -3,6 +3,7 @@ import { ShieldCheck, LogOut, LayoutDashboard, Settings } from 'lucide-react';
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
+  signInWithPopup,
   onAuthStateChanged,
   signOut
 } from "firebase/auth";
@@ -10,7 +11,7 @@ import {
   collection, doc, setDoc, getDoc, getDocs, updateDoc,
   arrayUnion, query, where, onSnapshot, serverTimestamp
 } from "firebase/firestore";
-import { auth, db } from './firebase';
+import { auth, googleProvider, db } from './firebase';
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
@@ -123,7 +124,7 @@ export default function App() {
     const queryDomains = domainsList.slice(0, 10);
     const qImpostors = query(collection(db, 'generated_impostors'), where('original_domain', 'in', queryDomains));
 
-    // Notice this listener doesn't return unsub right now to avoid complex cleanup tracking in React 
+    // Notice this listener doesn't return unsub right now to avoid complex cleanup tracking in React
     // for multiple dynamic chunks. In prod, careful unmounting is needed.
     onSnapshot(qImpostors, (snapshot) => {
       const imps = [];
@@ -147,6 +148,16 @@ export default function App() {
       }
       setEmail('');
       setPassword('');
+    } catch (err) {
+      setAuthError(err.message);
+      setTimeout(() => setAuthError(''), 5000);
+    }
+  };
+
+  const handleGoogleAuth = async () => {
+    setAuthError('');
+    try {
+      await signInWithPopup(auth, googleProvider);
     } catch (err) {
       setAuthError(err.message);
       setTimeout(() => setAuthError(''), 5000);
@@ -236,6 +247,20 @@ export default function App() {
                 </div>
                 <button type="submit" className="btn btn-primary w-full">Sign In</button>
                 <button type="button" onClick={(e) => handleAuth(false, e)} className="btn btn-ghost w-full mt-4">Create Account</button>
+                <div style={{ margin: '1rem 0', display: 'flex', alignItems: 'center', opacity: 0.5 }}>
+                  <span style={{ flex: 1, height: '1px', background: 'var(--border-color)' }}></span>
+                  <span style={{ padding: '0 10px', fontSize: '0.8rem' }}>OR</span>
+                  <span style={{ flex: 1, height: '1px', background: 'var(--border-color)' }}></span>
+                </div>
+                <button type="button" onClick={handleGoogleAuth} className="btn btn-secondary w-full" style={{ display: 'flex', gap: '0.5rem' }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M22.56 12.25C22.56 11.47 22.49 10.72 22.36 10H12v4.57h5.92c-.26 1.5-1.14 2.76-2.43 3.63v3.01h3.94c2.31-2.12 3.13-5.26 3.13-8.96z" fill="#4285F4" />
+                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.94-3.01c-.98.66-2.23 1.05-3.34 1.05-2.57 0-4.74-1.74-5.52-4.08H2.39v3.1C4.21 21.01 7.82 23 12 23z" fill="#34A853" />
+                    <path d="M6.48 14.3A6.71 6.71 0 016.14 12c0-.79.14-1.55.35-2.28v-3.1H2.39A10.99 10.99 0 001 12c0 1.77.43 3.44 1.19 4.93l4.29-2.63z" fill="#FBBC05" />
+                    <path d="M12 4.93c1.62 0 3.07.56 4.22 1.66l3.17-3.17C17.46 1.66 14.97.7 12 .7 7.82.7 4.21 2.68 2.39 6.22l4.09 3.1C7.26 6.98 9.43 4.93 12 4.93z" fill="#EA4335" />
+                  </svg>
+                  Continue with Google
+                </button>
                 {authError && <div className="error-msg">{authError}</div>}
               </form>
             </section>
