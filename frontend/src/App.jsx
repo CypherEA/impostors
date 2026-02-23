@@ -198,7 +198,7 @@ export default function App() {
     if (toExport.length === 0) return;
 
     // CSV Headers
-    const headers = ['Impostor Domain', 'Original Domain', 'Confidence Score', 'Resolved A', 'Resolved MX', 'Resolved TXT', 'Last Scanned', 'First Detected'];
+    const headers = ['Impostor Domain', 'Original Domain', 'Confidence Score', 'Resolved A', 'Resolved MX', 'Resolved TXT', 'Last Scanned', 'Detected by App', 'Actual Reg Date'];
 
     const csvContent = [
       headers.join(','),
@@ -211,7 +211,8 @@ export default function App() {
           row.records.MX ? 'Yes' : 'No',
           row.records.TXT ? 'Yes' : 'No',
           row.last_scanned ? row.last_scanned.toDate().toISOString() : '',
-          row.first_detected_at ? row.first_detected_at.toDate().toISOString() : ''
+          row.first_detected_at ? row.first_detected_at.toDate().toISOString() : '',
+          row.registry_created_at ? row.registry_created_at : 'Unknown'
         ].join(',');
       })
     ].join('\n');
@@ -488,12 +489,13 @@ export default function App() {
                         <th>Confidence</th>
                         <th>Detected Records</th>
                         <th>Last Scanned</th>
-                        <th>First Registered</th>
+                        <th>App Detection</th>
+                        <th>Actual Registry Date</th>
                       </tr>
                     </thead>
                     <tbody>
                       {impostors.filter(imp => activeDomainFilter ? imp.original_domain === activeDomainFilter : true).length === 0 ? (
-                        <tr><td colSpan="6" style={{ textAlign: 'center' }} className="subtitle">
+                        <tr><td colSpan="7" style={{ textAlign: 'center' }} className="subtitle">
                           {activeDomainFilter ? `No resolving impostor domains detected for ${activeDomainFilter} yet.` : `No resolving impostor domains detected yet.`}
                         </td></tr>
                       ) : (
@@ -517,6 +519,9 @@ export default function App() {
                                 </td>
                                 <td className="subtitle" style={{ fontSize: '0.8rem' }}>
                                   {imp.first_detected_at ? imp.first_detected_at.toDate().toLocaleDateString() : 'N/A'}
+                                </td>
+                                <td className="subtitle" style={{ fontSize: '0.8rem', color: imp.registry_created_at && imp.registry_created_at !== 'Redacted/Unknown' ? 'var(--danger)' : 'var(--text-muted)' }}>
+                                  {imp.registry_created_at ? (imp.registry_created_at === 'Redacted/Unknown' ? 'Redacted' : new Date(imp.registry_created_at).toLocaleDateString()) : 'N/A'}
                                 </td>
                               </tr>
                             )

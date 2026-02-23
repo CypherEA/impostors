@@ -3,12 +3,12 @@ import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 export const firebaseConfig = {
-    apiKey: "AIzaSyCrLp2dD9oaM66XSnuF3xrvKQg345dG-so",
-    authDomain: "boilermaker-impostors.firebaseapp.com",
-    projectId: "boilermaker-impostors",
-    storageBucket: "boilermaker-impostors.firebasestorage.app",
-    messagingSenderId: "368342941852",
-    appId: "1:368342941852:web:a71d437626519ed500ed59"
+    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+    appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
 const app = initializeApp(firebaseConfig);

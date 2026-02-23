@@ -2,7 +2,7 @@ import http from 'http';
 import cron from 'node-cron';
 import admin from 'firebase-admin';
 import { generateImpostors } from './generator.js';
-import { scanDomain } from './scanner.js';
+import { scanDomain, getRegistrationDate } from './scanner.js';
 
 // ----------------------------------------------------
 // 1. Firebase Admin Initialization
@@ -90,6 +90,10 @@ if (db) {
                         console.log(`[ALERT] Resolving Impostor Found during initial scan: ${impostorDomain}`);
                         payload.first_detected_at = admin.firestore.FieldValue.serverTimestamp();
                         payload.last_scanned = admin.firestore.FieldValue.serverTimestamp();
+
+                        // Fetch the actual registry creation date via RDAP
+                        const actualRegDate = await getRegistrationDate(impostorDomain);
+                        payload.registry_created_at = actualRegDate || "Redacted/Unknown";
                     } else {
                         // Even if it doesn't resolve right now, we keep a record of the last time we checked it
                         payload.last_scanned = admin.firestore.FieldValue.serverTimestamp();
@@ -153,6 +157,10 @@ cron.schedule('0 * * * *', async () => {
             if (isResolving && !data.first_detected_at) {
                 console.log(`[ALERT] Newly Resolving Impostor Found during CRON: ${impostorDomain}`);
                 updatePayload.first_detected_at = admin.firestore.FieldValue.serverTimestamp();
+
+                // Fetch the actual registry creation date since it is newly resolving
+                const actualRegDate = await getRegistrationDate(impostorDomain);
+                updatePayload.registry_created_at = actualRegDate || "Redacted/Unknown";
             }
 
             await doc.ref.update(updatePayload);
