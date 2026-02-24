@@ -620,6 +620,11 @@ export default function App() {
                                 <td className="subtitle" style={{ fontSize: '0.8rem', color: imp.registry_created_at && imp.registry_created_at !== 'Redacted/Unknown' ? 'var(--danger)' : 'var(--text-muted)' }}>
                                   {imp.registry_created_at ? (imp.registry_created_at === 'Redacted/Unknown' ? 'Redacted' : new Date(imp.registry_created_at).toLocaleDateString()) : 'N/A'}
                                 </td>
+                                <td>
+                                  <button onClick={() => removeImpostor(imp.impostor_domain)} className="btn btn-ghost btn-sm" style={{ color: 'var(--danger)', padding: '5px' }} title="Remove Impostor">
+                                    <Trash2 size={16} />
+                                  </button>
+                                </td>
                               </tr>
                             )
                           })
