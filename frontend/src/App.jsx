@@ -241,6 +241,11 @@ export default function App() {
     document.body.removeChild(link);
   };
 
+  // Silently wake up the free Render.com backend container
+  const pingRender = () => {
+    fetch('https://impostors-5nty.onrender.com', { mode: 'no-cors' }).catch(() => { });
+  };
+
   const removeMonitoredDomain = async (e, domainObj) => {
     e.stopPropagation();
     if (!window.confirm(`Are you sure you want to stop monitoring ${domainObj.domain}?`)) return;
@@ -282,6 +287,8 @@ export default function App() {
 
     if (targets.length === 0) return;
     if (!window.confirm(`Queue manual scan for ${targets.length} domains?`)) return;
+
+    pingRender();
 
     try {
       for (const t of targets) {
@@ -327,6 +334,8 @@ export default function App() {
 
     const domain = newDomain.trim().toLowerCase();
     if (!domain) return;
+
+    pingRender();
 
     try {
       const domainRef = doc(db, 'monitored_domains', domain);
