@@ -248,9 +248,14 @@ cron.schedule('* * * * *', async () => {
             console.log(`[SCREENSHOT QUEUE] Processing ${domain}...`);
             await doc.ref.update({ needs_screenshot: admin.firestore.FieldValue.delete() });
 
-            const url = await takeScreenshot(domain);
-            if (url) {
-                await doc.ref.update({ screenshot_url: url });
+            const { url, is_malicious } = await takeScreenshot(domain);
+
+            const updatePayload = {};
+            if (url) updatePayload.screenshot_url = url;
+            if (is_malicious) updatePayload.safebrowsing_flagged = true;
+
+            if (Object.keys(updatePayload).length > 0) {
+                await doc.ref.update(updatePayload);
             }
         }
     } catch (e) {

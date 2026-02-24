@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, LogOut, LayoutDashboard, Settings, Eye, Download, RefreshCw, Activity, X, Trash2, Image as ImageIcon } from 'lucide-react';
+import { ShieldCheck, LogOut, LayoutDashboard, Settings, Eye, Download, RefreshCw, Activity, X, Trash2, Image as ImageIcon, TriangleAlert } from 'lucide-react';
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -438,6 +438,11 @@ export default function App() {
                                   <button onClick={() => setActiveScreenshot(d.screenshot_url)} className="btn btn-ghost btn-sm" style={{ padding: '0 5px' }} title="View Screenshot">
                                     <ImageIcon size={14} className="text-primary" />
                                   </button>
+                                )}
+                                {d.safebrowsing_flagged && (
+                                  <div style={{ display: 'inline-flex', alignItems: 'center', color: 'var(--danger)', marginLeft: '4px' }} title="Flagged as Malicious/Phishing by Google SafeBrowsing">
+                                    <TriangleAlert size={16} />
+                                  </div>
                                 )}
                               </div>
                             </td>
