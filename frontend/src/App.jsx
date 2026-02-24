@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, LogOut, LayoutDashboard, Settings, Eye, Download, RefreshCw, Activity, X, Trash2 } from 'lucide-react';
+import { ShieldCheck, LogOut, LayoutDashboard, Settings, Eye, Download, RefreshCw, Activity, X, Trash2, Image as ImageIcon } from 'lucide-react';
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -47,6 +47,7 @@ export default function App() {
   const [popupData, setPopupData] = useState([]);
   const [isPopupLoading, setIsPopupLoading] = useState(false);
   const [selectedImpostors, setSelectedImpostors] = useState(new Set());
+  const [activeScreenshot, setActiveScreenshot] = useState(null);
 
   // Admin State
   const [adminData, setAdminData] = useState([]);
@@ -402,14 +403,21 @@ export default function App() {
                           <tr key={d.impostor_domain}>
                             <td><input type="checkbox" checked={selectedImpostors.has(d.impostor_domain)} onChange={() => toggleSelection(d.impostor_domain)} /></td>
                             <td>
-                              {punycodeToUnicode(d.impostor_domain) !== d.impostor_domain ? (
-                                <>
-                                  <span style={{ fontWeight: 600 }}>{punycodeToUnicode(d.impostor_domain)}</span>
-                                  <span className="subtitle" style={{ marginLeft: '8px', fontSize: '0.8rem' }}>({d.impostor_domain})</span>
-                                </>
-                              ) : (
-                                <span style={{ fontWeight: 600 }}>{d.impostor_domain}</span>
-                              )}
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                {punycodeToUnicode(d.impostor_domain) !== d.impostor_domain ? (
+                                  <>
+                                    <span style={{ fontWeight: 600 }}>{punycodeToUnicode(d.impostor_domain)}</span>
+                                    <span className="subtitle" style={{ fontSize: '0.8rem' }}>({d.impostor_domain})</span>
+                                  </>
+                                ) : (
+                                  <span style={{ fontWeight: 600 }}>{d.impostor_domain}</span>
+                                )}
+                                {d.screenshot_url && (
+                                  <button onClick={() => setActiveScreenshot(d.screenshot_url)} className="btn btn-ghost btn-sm" style={{ padding: '0 5px' }} title="View Screenshot">
+                                    <ImageIcon size={14} className="text-primary" />
+                                  </button>
+                                )}
+                              </div>
                             </td>
                             <td><span style={{ color: confColor, fontWeight: 600 }}>{d.confidence_level}%</span></td>
                             <td>
@@ -593,14 +601,21 @@ export default function App() {
                             return (
                               <tr key={imp.impostor_domain}>
                                 <td style={{ color: '#fff' }}>
-                                  {punycodeToUnicode(imp.impostor_domain) !== imp.impostor_domain ? (
-                                    <>
-                                      <span style={{ fontWeight: 600 }}>{punycodeToUnicode(imp.impostor_domain)}</span>
-                                      <span className="subtitle" style={{ marginLeft: '8px', fontSize: '0.8rem' }}>({imp.impostor_domain})</span>
-                                    </>
-                                  ) : (
-                                    <span style={{ fontWeight: 600 }}>{imp.impostor_domain}</span>
-                                  )}
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    {punycodeToUnicode(imp.impostor_domain) !== imp.impostor_domain ? (
+                                      <>
+                                        <span style={{ fontWeight: 600 }}>{punycodeToUnicode(imp.impostor_domain)}</span>
+                                        <span className="subtitle" style={{ fontSize: '0.8rem' }}>({imp.impostor_domain})</span>
+                                      </>
+                                    ) : (
+                                      <span style={{ fontWeight: 600 }}>{imp.impostor_domain}</span>
+                                    )}
+                                    {imp.screenshot_url && (
+                                      <button onClick={() => setActiveScreenshot(imp.screenshot_url)} className="btn btn-ghost btn-sm" style={{ padding: '0 5px' }} title="View Screenshot">
+                                        <ImageIcon size={14} className="text-primary" />
+                                      </button>
+                                    )}
+                                  </div>
                                 </td>
                                 <td className="subtitle">{imp.original_domain}</td>
                                 <td><span style={{ color: confColor, fontWeight: 600 }}>{imp.confidence_level}%</span></td>
@@ -668,6 +683,20 @@ export default function App() {
           )}
         </main>
       </div>
+
+      {activeScreenshot && (
+        <div className="modal-overlay" onClick={() => setActiveScreenshot(null)}>
+          <div className="screenshot-modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header" style={{ marginBottom: '0.5rem', paddingBottom: '0.5rem' }}>
+              <h3>Domain Screenshot</h3>
+              <button onClick={() => setActiveScreenshot(null)} className="btn btn-ghost btn-sm" style={{ padding: '5px' }}>
+                <X size={20} />
+              </button>
+            </div>
+            <img src={activeScreenshot} alt="Domain Capture" className="screenshot-img" />
+          </div>
+        </div>
+      )}
     </>
   );
 }

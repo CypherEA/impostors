@@ -484,3 +484,21 @@ input[type="checkbox"] {
   height: 16px;
   cursor: pointer;
 }
+
+.screenshot-modal {
+  width: 50vw;
+  max-width: 800px;
+  background: var(--panel-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
+  padding: 1rem;
+  position: relative;
+}
+
+.screenshot-img {
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+}

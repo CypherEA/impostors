@@ -3,6 +3,7 @@ import cron from 'node-cron';
 import admin from 'firebase-admin';
 import { generateImpostors } from './generator.js';
 import { scanDomain, getRegistrationDate } from './scanner.js';
+import { takeScreenshot } from './screenshot.js';
 
 // ----------------------------------------------------
 // 1. Firebase Admin Initialization
@@ -11,7 +12,8 @@ import { scanDomain, getRegistrationDate } from './scanner.js';
 // ----------------------------------------------------
 try {
     admin.initializeApp({
-        credential: admin.credential.applicationDefault()
+        credential: admin.credential.applicationDefault(),
+        storageBucket: 'boilermaker-impostors.firebasestorage.app'
     });
 } catch (e) {
     console.warn("WARNING: Firebase Admin initialization failed. Ensure GOOGLE_APPLICATION_CREDENTIALS is set.", e.message);
@@ -90,6 +92,7 @@ if (db) {
                         console.log(`[ALERT] Resolving Impostor Found during initial scan: ${impostorDomain}`);
                         payload.first_detected_at = admin.firestore.FieldValue.serverTimestamp();
                         payload.last_scanned = admin.firestore.FieldValue.serverTimestamp();
+                        payload.needs_screenshot = true;
 
                         // Fetch the actual registry creation date via RDAP
                         const actualRegDate = await getRegistrationDate(impostorDomain);
@@ -140,6 +143,7 @@ if (db) {
                 if (isResolving && !data.first_detected_at) {
                     console.log(`[ALERT] Newly Resolving Impostor Found during ON-DEMAND scan: ${impostorDomain}`);
                     updatePayload.first_detected_at = admin.firestore.FieldValue.serverTimestamp();
+                    updatePayload.needs_screenshot = true;
                 }
 
                 if (isResolving && !data.registry_created_at) {
@@ -199,6 +203,7 @@ cron.schedule('0 * * * *', async () => {
             if (isResolving && !data.first_detected_at) {
                 console.log(`[ALERT] Newly Resolving Impostor Found during CRON: ${impostorDomain}`);
                 updatePayload.first_detected_at = admin.firestore.FieldValue.serverTimestamp();
+                updatePayload.needs_screenshot = true;
             }
 
             if (isResolving && !data.registry_created_at) {
@@ -214,5 +219,37 @@ cron.schedule('0 * * * *', async () => {
         console.log(`[${new Date().toISOString()}] Hourly CRON completed.`);
     } catch (err) {
         console.error("Error during hourly CRON:", err);
+    }
+});
+
+// ----------------------------------------------------
+// 6. SCREENSHOT QUEUE PROCESSOR (Runs every 1 minute)
+// ----------------------------------------------------
+let isProcessingScreenshot = false;
+cron.schedule('* * * * *', async () => {
+    if (!db || isProcessingScreenshot) return;
+    try {
+        isProcessingScreenshot = true;
+        const snap = await db.collection('generated_impostors')
+            .where('needs_screenshot', '==', true)
+            .limit(1)
+            .get();
+
+        if (!snap.empty) {
+            const doc = snap.docs[0];
+            const domain = doc.data().impostor_domain;
+
+            console.log(`[SCREENSHOT QUEUE] Processing ${domain}...`);
+            await doc.ref.update({ needs_screenshot: admin.firestore.FieldValue.delete() });
+
+            const url = await takeScreenshot(domain);
+            if (url) {
+                await doc.ref.update({ screenshot_url: url });
+            }
+        }
+    } catch (e) {
+        console.error("Screenshot Queue Error:", e);
+    } finally {
+        isProcessingScreenshot = false;
     }
 });
