@@ -140,7 +140,9 @@ if (db) {
                 if (isResolving && !data.first_detected_at) {
                     console.log(`[ALERT] Newly Resolving Impostor Found during ON-DEMAND scan: ${impostorDomain}`);
                     updatePayload.first_detected_at = admin.firestore.FieldValue.serverTimestamp();
+                }
 
+                if (isResolving && !data.registry_created_at) {
                     const actualRegDate = await getRegistrationDate(impostorDomain);
                     updatePayload.registry_created_at = actualRegDate || "Redacted/Unknown";
                 }
@@ -197,8 +199,10 @@ cron.schedule('0 * * * *', async () => {
             if (isResolving && !data.first_detected_at) {
                 console.log(`[ALERT] Newly Resolving Impostor Found during CRON: ${impostorDomain}`);
                 updatePayload.first_detected_at = admin.firestore.FieldValue.serverTimestamp();
+            }
 
-                // Fetch the actual registry creation date since it is newly resolving
+            if (isResolving && !data.registry_created_at) {
+                // Fetch the actual registry creation date since it is newly resolving or missed it previously
                 const actualRegDate = await getRegistrationDate(impostorDomain);
                 updatePayload.registry_created_at = actualRegDate || "Redacted/Unknown";
             }
