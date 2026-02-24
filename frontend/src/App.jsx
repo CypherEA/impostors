@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, LogOut, LayoutDashboard, Settings, Eye, Download, RefreshCw, Activity, X } from 'lucide-react';
+import { ShieldCheck, LogOut, LayoutDashboard, Settings, Eye, Download, RefreshCw, Activity, X, Trash2 } from 'lucide-react';
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -9,9 +9,23 @@ import {
 } from "firebase/auth";
 import {
   collection, doc, setDoc, getDoc, getDocs, updateDoc,
-  arrayUnion, query, where, onSnapshot, serverTimestamp
+  arrayUnion, arrayRemove, deleteDoc, query, where, onSnapshot, serverTimestamp
 } from "firebase/firestore";
 import { auth, googleProvider, db } from './firebase';
+
+// Lightweight Punycode Decoder (since we cannot run npm install on the host)
+function punycodeToUnicode(domain) {
+  if (!domain.includes('xn--')) return domain;
+
+  try {
+    // The modern URL specification automatically handles punycode to unicode conversion 
+    // for the hostname property when instantiated.
+    const url = new URL(`http://${domain}`);
+    return url.hostname;
+  } catch (e) {
+    return domain;
+  }
+}
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
@@ -228,6 +242,58 @@ export default function App() {
     document.body.removeChild(link);
   };
 
+  const removeMonitoredDomain = async (e, domainObj) => {
+    e.stopPropagation();
+    if (!window.confirm(`Are you sure you want to stop monitoring ${domainObj.domain}?`)) return;
+
+    try {
+      const domainRef = doc(db, 'monitored_domains', domainObj.domain);
+
+      if (domainObj.users.length > 1) {
+        await updateDoc(domainRef, { users: arrayRemove(currentUser.uid) });
+      } else {
+        await deleteDoc(domainRef);
+        const qImpostors = query(collection(db, 'generated_impostors'), where('original_domain', '==', domainObj.domain));
+        const snap = await getDocs(qImpostors);
+        snap.forEach(d => deleteDoc(d.ref));
+      }
+
+      if (activeDomainFilter === domainObj.domain) setActiveDomainFilter(null);
+    } catch (err) {
+      alert("Error removing domain: " + err.message);
+    }
+  };
+
+  const removeImpostor = async (impostorDomain) => {
+    if (!window.confirm(`Are you sure you want to permanently ignore ${impostorDomain}?`)) return;
+    try {
+      await deleteDoc(doc(db, 'generated_impostors', impostorDomain));
+      const newSel = new Set(selectedImpostors);
+      newSel.delete(impostorDomain);
+      setSelectedImpostors(newSel);
+    } catch (err) {
+      alert("Error removing impostor: " + err.message);
+    }
+  };
+
+  const triggerOnDemandScan = async () => {
+    const targets = selectedImpostors.size > 0
+      ? Array.from(selectedImpostors)
+      : popupData.map(d => d.impostor_domain);
+
+    if (targets.length === 0) return;
+    if (!window.confirm(`Queue manual scan for ${targets.length} domains?`)) return;
+
+    try {
+      for (const t of targets) {
+        await updateDoc(doc(db, 'generated_impostors', t), { force_scan: true });
+      }
+      alert(`Successfully queued ${targets.length} domains for immediate backend scanning!`);
+    } catch (err) {
+      alert("Error queuing scan: " + err.message);
+    }
+  };
+
   // --- Auth Handlers ---
   const handleAuth = async (isLogin, e) => {
     e.preventDefault();
@@ -303,10 +369,11 @@ export default function App() {
               </button>
               {/* Note: Regeneration and On-Demand resolving require backend endpoints in a production environment. 
                    For this draft, we stub the actions. */}
+              {/* Note: Regeneration requires full backend invocation list processing, stubbed for now. */}
               <button onClick={() => alert("Regeneration request sent to backend via PubSub/HTTP trigger!")} className="btn btn-secondary btn-sm">
                 <RefreshCw size={14} className="inline mr-1 -mt-1" /> Regenerate List
               </button>
-              <button onClick={() => alert("On-Demand resolve scan queued!")} className="btn btn-primary btn-sm">
+              <button onClick={triggerOnDemandScan} className="btn btn-primary btn-sm">
                 <Activity size={14} className="inline mr-1 -mt-1" /> Run Manual Scan Now
               </button>
             </div>
@@ -323,6 +390,7 @@ export default function App() {
                       <th>Confidence</th>
                       <th>Is Resolving</th>
                       <th>Last Checked</th>
+                      <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -335,13 +403,27 @@ export default function App() {
                         return (
                           <tr key={d.impostor_domain}>
                             <td><input type="checkbox" checked={selectedImpostors.has(d.impostor_domain)} onChange={() => toggleSelection(d.impostor_domain)} /></td>
-                            <td>{d.impostor_domain}</td>
+                            <td>
+                              {punycodeToUnicode(d.impostor_domain) !== d.impostor_domain ? (
+                                <>
+                                  <span style={{ fontWeight: 600 }}>{punycodeToUnicode(d.impostor_domain)}</span>
+                                  <span className="subtitle" style={{ marginLeft: '8px', fontSize: '0.8rem' }}>({d.impostor_domain})</span>
+                                </>
+                              ) : (
+                                <span style={{ fontWeight: 600 }}>{d.impostor_domain}</span>
+                              )}
+                            </td>
                             <td><span style={{ color: confColor, fontWeight: 600 }}>{d.confidence_level}%</span></td>
                             <td>
                               {isRes ? <span className="badge error">Yes</span> : <span className="badge">No</span>}
                             </td>
                             <td className="subtitle" style={{ fontSize: '0.8rem' }}>
                               {d.last_scanned ? d.last_scanned.toDate().toLocaleDateString() : 'N/A'}
+                            </td>
+                            <td>
+                              <button onClick={() => removeImpostor(d.impostor_domain)} className="btn btn-ghost btn-sm" style={{ color: 'var(--danger)', padding: '5px' }}>
+                                <Trash2 size={16} />
+                              </button>
                             </td>
                           </tr>
                         )
@@ -456,7 +538,12 @@ export default function App() {
                     >
                       <div className="card-title">
                         <span>{d.domain}</span>
-                        <span className="badge" style={{ background: 'var(--success-bg)', color: 'var(--success)' }}>Active</span>
+                        <div style={{ display: 'flex', gap: '5px' }}>
+                          <span className="badge" style={{ background: 'var(--success-bg)', color: 'var(--success)' }}>Active</span>
+                          <button onClick={(e) => removeMonitoredDomain(e, d)} className="btn btn-ghost btn-sm" title="Remove Domain" style={{ padding: '0 5px', minWidth: '0' }}>
+                            <Trash2 size={16} color="var(--danger)" />
+                          </button>
+                        </div>
                       </div>
                       <div className="subtitle mt-4" style={{ fontSize: '0.8rem' }}>Added: {d.createdAt ? d.createdAt.toDate().toLocaleDateString() : 'Just now'}</div>
                       <button
@@ -491,6 +578,7 @@ export default function App() {
                         <th>Last Scanned</th>
                         <th>App Detection</th>
                         <th>Actual Registry Date</th>
+                        <th>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -506,7 +594,16 @@ export default function App() {
                             const isRes = imp.records && (imp.records.A || imp.records.MX || imp.records.TXT);
                             return (
                               <tr key={imp.impostor_domain}>
-                                <td style={{ fontWeight: 600, color: '#fff' }}>{imp.impostor_domain}</td>
+                                <td style={{ color: '#fff' }}>
+                                  {punycodeToUnicode(imp.impostor_domain) !== imp.impostor_domain ? (
+                                    <>
+                                      <span style={{ fontWeight: 600 }}>{punycodeToUnicode(imp.impostor_domain)}</span>
+                                      <span className="subtitle" style={{ marginLeft: '8px', fontSize: '0.8rem' }}>({imp.impostor_domain})</span>
+                                    </>
+                                  ) : (
+                                    <span style={{ fontWeight: 600 }}>{imp.impostor_domain}</span>
+                                  )}
+                                </td>
                                 <td className="subtitle">{imp.original_domain}</td>
                                 <td><span style={{ color: confColor, fontWeight: 600 }}>{imp.confidence_level}%</span></td>
                                 <td>

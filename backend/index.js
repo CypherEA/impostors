@@ -111,6 +111,46 @@ if (db) {
     }, err => {
         console.error("Firestore listener error:", err);
     });
+
+    console.log("Starting Firestore listener for On-Demand manual scans...");
+    db.collection('generated_impostors').where('force_scan', '==', true).onSnapshot(snapshot => {
+        snapshot.docChanges().forEach(async change => {
+            if (change.type === 'added' || change.type === 'modified') {
+                const data = change.doc.data();
+                if (!data.force_scan) return;
+
+                const impostorDomain = data.impostor_domain;
+                console.log(`[ON-DEMAND] Manual scan triggered for ${impostorDomain}`);
+
+                // Immediately remove the flag to prevent infinite loops
+                await change.doc.ref.update({ force_scan: admin.firestore.FieldValue.delete() });
+
+                // Execute the scan
+                const results = await scanDomain(impostorDomain);
+                const isResolving = results.A || results.MX || results.TXT;
+                const nextScanAt = getRandomNextScanDate(7);
+
+                const updatePayload = {
+                    records: results,
+                    next_scan_at: nextScanAt,
+                    last_scanned: admin.firestore.FieldValue.serverTimestamp()
+                };
+
+                // If newly resolving
+                if (isResolving && !data.first_detected_at) {
+                    console.log(`[ALERT] Newly Resolving Impostor Found during ON-DEMAND scan: ${impostorDomain}`);
+                    updatePayload.first_detected_at = admin.firestore.FieldValue.serverTimestamp();
+
+                    const actualRegDate = await getRegistrationDate(impostorDomain);
+                    updatePayload.registry_created_at = actualRegDate || "Redacted/Unknown";
+                }
+
+                await change.doc.ref.update(updatePayload);
+            }
+        });
+    }, err => {
+        console.error("Firestore manual scan listener error:", err);
+    });
 }
 
 // ----------------------------------------------------
