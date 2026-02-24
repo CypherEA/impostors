@@ -642,6 +642,11 @@ export default function App() {
                                         <ImageIcon size={14} className="text-primary" />
                                       </button>
                                     )}
+                                    {imp.safebrowsing_flagged && (
+                                      <div style={{ display: 'inline-flex', alignItems: 'center', color: 'var(--danger)', marginLeft: '4px' }} title="Flagged as Malicious/Phishing by Google SafeBrowsing">
+                                        <TriangleAlert size={16} />
+                                      </div>
+                                    )}
                                   </div>
                                 </td>
                                 <td className="subtitle">{imp.original_domain}</td>
