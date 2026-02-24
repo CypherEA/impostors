@@ -1,4 +1,4 @@
-import punycode from 'punycode/';
+import punycode from 'punycode/punycode.js';
 
 const TLDs = ['com', 'org', 'net', 'co', 'info', 'biz', 'us', 'io'];
 const ADJACENT_KEYS = {
