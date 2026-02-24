@@ -53,12 +53,18 @@ if (db) {
     console.log("Starting Firestore listener for new domains...");
     db.collection('monitored_domains').onSnapshot(snapshot => {
         snapshot.docChanges().forEach(async change => {
-            // Only trigger on newly added domains
-            if (change.type === 'added') {
+            // Trigger on newly added domains OR when a domain is manually flagged for regeneration
+            if (change.type === 'added' || change.type === 'modified') {
                 const data = change.doc.data();
+
+                // If it's a modification, only trigger if it explicitly requests regeneration
+                if (change.type === 'modified' && data.processed_by_worker !== false) {
+                    return;
+                }
+
                 const domainStr = data.domain;
 
-                // Check if this domain has already been processed by the worker
+                // Check if this domain has already been processed by the worker (and not requesting regen)
                 if (data.processed_by_worker) return;
 
                 console.log(`[NEW DOMAIN] Detected: ${domainStr}. Starting generation and initial scan.`);

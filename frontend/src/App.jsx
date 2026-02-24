@@ -300,6 +300,22 @@ export default function App() {
     }
   };
 
+  const triggerRegenerateList = async () => {
+    if (!popupDomain) return;
+    if (!window.confirm(`Are you sure you want to regenerate all impostor combinations for ${popupDomain}?`)) return;
+
+    pingRender();
+
+    try {
+      await updateDoc(doc(db, 'monitored_domains', popupDomain), {
+        processed_by_worker: false // setting this to false triggers the backend onSnapshot logic
+      });
+      alert(`Regeneration queued for ${popupDomain}! Check back in a few moments.`);
+    } catch (err) {
+      alert("Error submitting regeneration request: " + err.message);
+    }
+  };
+
   // --- Auth Handlers ---
   const handleAuth = async (isLogin, e) => {
     e.preventDefault();
@@ -375,10 +391,7 @@ export default function App() {
                 <Download size={14} className="inline mr-1 -mt-1" />
                 Export {selectedImpostors.size > 0 ? `Selected (${selectedImpostors.size})` : 'All'}
               </button>
-              {/* Note: Regeneration and On-Demand resolving require backend endpoints in a production environment. 
-                   For this draft, we stub the actions. */}
-              {/* Note: Regeneration requires full backend invocation list processing, stubbed for now. */}
-              <button onClick={() => alert("Regeneration request sent to backend via PubSub/HTTP trigger!")} className="btn btn-secondary btn-sm">
+              <button onClick={triggerRegenerateList} className="btn btn-secondary btn-sm">
                 <RefreshCw size={14} className="inline mr-1 -mt-1" /> Regenerate List
               </button>
               <button onClick={triggerOnDemandScan} className="btn btn-primary btn-sm">
