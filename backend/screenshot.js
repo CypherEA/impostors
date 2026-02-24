@@ -19,7 +19,12 @@ export async function takeScreenshot(domain) {
                 '--disable-setuid-sandbox',
                 '--disable-gpu',
                 '--disable-dev-shm-usage',
-                '--window-size=1280,800' // Desktop view
+                '--window-size=1280,800', // Desktop view
+                '--disable-web-security',
+                '--disable-features=IsolateOrigins,site-per-process,SafeBrowsing',
+                '--safebrowsing-disable-auto-update',
+                '--safebrowsing-disable-download-protection',
+                '--disable-client-side-phishing-detection'
             ]
         });
 
