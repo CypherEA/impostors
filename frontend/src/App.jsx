@@ -12,16 +12,14 @@ import {
   arrayUnion, arrayRemove, deleteDoc, query, where, onSnapshot, serverTimestamp
 } from "firebase/firestore";
 import { auth, googleProvider, db } from './firebase';
+import punycode from 'punycode/';
 
-// Lightweight Punycode Decoder (since we cannot run npm install on the host)
+// Real Punycode Decoder using NPM package
 function punycodeToUnicode(domain) {
   if (!domain.includes('xn--')) return domain;
 
   try {
-    // The modern URL specification automatically handles punycode to unicode conversion 
-    // for the hostname property when instantiated.
-    const url = new URL(`http://${domain}`);
-    return url.hostname;
+    return punycode.toUnicode(domain);
   } catch (e) {
     return domain;
   }
