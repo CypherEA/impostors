@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "start": "node index.js",
-    "render-build": "npm install && npx puppeteer browsers install chrome"
+    "render-build": "npm install && node node_modules/puppeteer/install.mjs"
   },
   "dependencies": {
     "@sparticuz/chromium": "^143.0.4",
