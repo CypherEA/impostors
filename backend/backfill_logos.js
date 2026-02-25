@@ -5,7 +5,8 @@ dotenv.config();
 
 // Initialize Firebase Admin with credentials from the same path the backend uses
 admin.initializeApp({
-    credential: admin.credential.cert(process.env.GOOGLE_APPLICATION_CREDENTIALS)
+    credential: admin.credential.cert(process.env.GOOGLE_APPLICATION_CREDENTIALS),
+    storageBucket: 'boilermaker-impostors.firebasestorage.app'
 });
 
 const db = admin.firestore();
