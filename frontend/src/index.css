@@ -79,8 +79,7 @@ body {
 .app-container {
   width: 95vw;
   max-width: 1800px;
-  min-height: 85vh;
-  max-height: 95vh;
+  height: 92vh;
   background: var(--panel-bg);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
@@ -90,7 +89,7 @@ body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  margin: 2vh auto;
+  margin: 0;
 }
 
 /* Header */
@@ -508,6 +507,7 @@ input[type="checkbox"] {
 .dashboard-layout {
   display: flex;
   flex: 1;
+  min-height: 0;
   overflow: hidden;
   /* Contains the scrollable panes within the glass panel bounds */
 }

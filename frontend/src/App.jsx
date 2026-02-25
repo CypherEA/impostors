@@ -83,6 +83,7 @@ export default function App() {
   const [newDomain, setNewDomain] = useState('');
   const [userDomains, setUserDomains] = useState([]);
   const [impostors, setImpostors] = useState([]);
+  const { items: sortedImpostors, requestSort, sortConfig } = useSortableData(impostors, { key: 'confidence_level', direction: 'descending' });
   const [activeDomainFilter, setActiveDomainFilter] = useState(null);
 
   // Popup / Generated Potentials State
