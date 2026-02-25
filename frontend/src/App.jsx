@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { ShieldCheck, LogOut, LayoutDashboard, Settings, Eye, Download, RefreshCw, Activity, X, Trash2, Image as ImageIcon, TriangleAlert } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { ShieldCheck, LogOut, LayoutDashboard, Settings, Eye, Download, RefreshCw, Activity, X, Trash2, Image as ImageIcon, TriangleAlert, ChevronUp, ChevronDown } from 'lucide-react';
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -23,6 +23,50 @@ function punycodeToUnicode(domain) {
   } catch (e) {
     return domain;
   }
+}
+
+// Custom Hook for Table Sorting
+function useSortableData(items, config = null) {
+  const [sortConfig, setSortConfig] = useState(config);
+
+  const sortedItems = useMemo(() => {
+    let sortableItems = [...items];
+    if (sortConfig !== null) {
+      sortableItems.sort((a, b) => {
+        let aValue = a[sortConfig.key];
+        let bValue = b[sortConfig.key];
+
+        // Handle specific nested/complex fields if necessary
+        if (sortConfig.key === 'last_scanned' || sortConfig.key === 'first_detected_at') {
+          aValue = aValue ? aValue.toMillis() : 0;
+          bValue = bValue ? bValue.toMillis() : 0;
+        }
+
+        if (aValue < bValue) {
+          return sortConfig.direction === 'ascending' ? -1 : 1;
+        }
+        if (aValue > bValue) {
+          return sortConfig.direction === 'ascending' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+    return sortableItems;
+  }, [items, sortConfig]);
+
+  const requestSort = (key) => {
+    let direction = 'ascending';
+    if (
+      sortConfig &&
+      sortConfig.key === key &&
+      sortConfig.direction === 'ascending'
+    ) {
+      direction = 'descending';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  return { items: sortedItems, requestSort, sortConfig };
 }
 
 export default function App() {
@@ -51,6 +95,7 @@ export default function App() {
 
   // Admin State
   const [adminData, setAdminData] = useState([]);
+  const { items: sortedAdminData, requestSort: requestAdminSort, sortConfig: adminSortConfig } = useSortableData(adminData, { key: 'added', direction: 'descending' });
 
   // Listen for Auth changes
   useEffect(() => {
@@ -544,146 +589,184 @@ export default function App() {
             </section>
           )}
 
-          {/* Dashboard View */}
+          {/* Dashboard View (Master-Detail Sidebar Layout) */}
           {activeView === 'dashboard' && (
-            <section className="view">
-              <div className="dashboard-header">
-                <div>
-                  <h2>Your Monitored Domains</h2>
-                  <p className="subtitle">Add domains to automatically generate and scan for impostors.</p>
+            <div className="dashboard-layout">
+              {/* Sidebar (Master) */}
+              <div className="sidebar">
+                <div className="sidebar-header">
+                  <h3 style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>Monitored Domains</h3>
+                  <p className="subtitle" style={{ fontSize: '0.75rem', marginBottom: '1rem' }}>Add a root domain to monitor for impersonation.</p>
+
+                  <form className="add-domain-form" onSubmit={addDomain} style={{ flexDirection: 'column', gap: '0.5rem' }}>
+                    <input type="text" required placeholder="example.com" value={newDomain} onChange={e => setNewDomain(e.target.value)} style={{ width: '100%' }} />
+                    <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>Add Target</button>
+                  </form>
                 </div>
-                <form className="add-domain-form" onSubmit={addDomain}>
-                  <input type="text" required placeholder="example.com" value={newDomain} onChange={e => setNewDomain(e.target.value)} />
-                  <button type="submit" className="btn btn-primary">Add Domain</button>
-                </form>
+
+                {/* Mobile Dropdown (Visible only at <= 900px) */}
+                <div className="mobile-domain-selector">
+                  <select
+                    value={activeDomainFilter || ""}
+                    onChange={e => setActiveDomainFilter(e.target.value === "" ? null : e.target.value)}
+                  >
+                    <option value="">Select a Domain to View...</option>
+                    {userDomains.map(d => (
+                      <option key={d.id} value={d.domain}>{d.domain}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Desktop List (Hidden at <= 900px) */}
+                <div className="sidebar-list">
+                  {userDomains.length === 0 ? (
+                    <div className="empty-state" style={{ padding: '2rem 1rem', fontSize: '0.8rem' }}>No domains monitored yet.</div>
+                  ) : (
+                    userDomains.map(d => (
+                      <div
+                        key={d.id}
+                        className={`sidebar-item ${activeDomainFilter === d.domain ? 'active' : ''}`}
+                        onClick={() => setActiveDomainFilter(activeDomainFilter === d.domain ? null : d.domain)}
+                      >
+                        <div className="sidebar-item-content">
+                          {d.original_favicon ? (
+                            <img src={d.original_favicon} alt="" style={{ width: '16px', height: '16px', borderRadius: '2px' }} />
+                          ) : (
+                            <div style={{ width: '16px', height: '16px', background: 'var(--border-color)', borderRadius: '2px' }}></div>
+                          )}
+                          <span className="sidebar-item-domain">{d.domain}</span>
+                        </div>
+                        <button onClick={(e) => removeMonitoredDomain(e, d)} className="btn btn-ghost btn-sm" title="Remove Domain" style={{ padding: '0 5px', minWidth: '0' }}>
+                          <Trash2 size={14} color="var(--danger)" />
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
 
-              <div className="grid">
-                {userDomains.length === 0 ? (
-                  <div className="empty-state">No domains monitored yet. Add one above!</div>
-                ) : (
-                  userDomains.map(d => (
-                    <div
-                      className={`card ${activeDomainFilter === d.domain ? 'active-filter' : ''}`}
-                      key={d.id}
-                      onClick={() => setActiveDomainFilter(activeDomainFilter === d.domain ? null : d.domain)}
-                      style={{ cursor: 'pointer', position: 'relative' }}
-                    >
-                      <div className="card-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          {d.original_favicon && (
-                            <img src={d.original_favicon} alt="Favicon" style={{ width: '16px', height: '16px', borderRadius: '2px' }} />
-                          )}
-                          <span>{d.domain}</span>
-                        </div>
-                        <div style={{ display: 'flex', gap: '5px' }}>
-                          <span className="badge" style={{ background: 'var(--success-bg)', color: 'var(--success)' }}>Active</span>
-                          <button onClick={(e) => removeMonitoredDomain(e, d)} className="btn btn-ghost btn-sm" title="Remove Domain" style={{ padding: '0 5px', minWidth: '0' }}>
-                            <Trash2 size={16} color="var(--danger)" />
-                          </button>
-                        </div>
+              {/* Main Content (Detail) */}
+              <div className="main-content">
+                {activeDomainFilter ? (
+                  <>
+                    <div className="detail-header">
+                      <div>
+                        <h2>Monitoring Detail: {activeDomainFilter}</h2>
+                        <span className="badge mt-2" style={{ background: 'var(--success-bg)', color: 'var(--success)', display: 'inline-block' }}>Active Tracking</span>
                       </div>
-                      <div className="subtitle mt-4" style={{ fontSize: '0.8rem' }}>Added: {d.createdAt ? d.createdAt.toDate().toLocaleDateString() : 'Just now'}</div>
                       <button
-                        onClick={(e) => { e.stopPropagation(); openDomainPopup(d.domain); }}
-                        className="btn btn-secondary btn-sm mt-4 w-full"
+                        onClick={(e) => { e.stopPropagation(); openDomainPopup(activeDomainFilter); }}
+                        className="btn btn-secondary"
                       >
-                        <Eye size={14} className="inline mr-1 -mt-1" /> View All Potentials
+                        <Eye size={16} className="inline mr-2 -mt-1" /> View Generation Matrix
                       </button>
                     </div>
-                  ))
+
+                    <div className="impostors-section">
+                      <h3 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        Resolved Impostors for {activeDomainFilter}
+                        <span className="badge error">
+                          {impostors.filter(imp => imp.original_domain === activeDomainFilter).length}
+                        </span>
+                      </h3>
+                      <div className="table-container">
+                        <table>
+                          <thead>
+                            <tr>
+                              <th onClick={() => requestSort('impostor_domain')} style={{ cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                                Impostor Domain {sortConfig?.key === 'impostor_domain' ? (sortConfig.direction === 'ascending' ? <ChevronUp size={14} className="inline" /> : <ChevronDown size={14} className="inline" />) : ''}
+                              </th>
+                              <th onClick={() => requestSort('original_domain')} style={{ cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                                Original {sortConfig?.key === 'original_domain' ? (sortConfig.direction === 'ascending' ? <ChevronUp size={14} className="inline" /> : <ChevronDown size={14} className="inline" />) : ''}
+                              </th>
+                              <th onClick={() => requestSort('confidence_level')} style={{ cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                                Confidence {sortConfig?.key === 'confidence_level' ? (sortConfig.direction === 'ascending' ? <ChevronUp size={14} className="inline" /> : <ChevronDown size={14} className="inline" />) : ''}
+                              </th>
+                              <th>Detected Records</th>
+                              <th onClick={() => requestSort('last_scanned')} style={{ cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                                Last Scanned {sortConfig?.key === 'last_scanned' ? (sortConfig.direction === 'ascending' ? <ChevronUp size={14} className="inline" /> : <ChevronDown size={14} className="inline" />) : ''}
+                              </th>
+                              <th onClick={() => requestSort('first_detected_at')} style={{ cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                                App Detection {sortConfig?.key === 'first_detected_at' ? (sortConfig.direction === 'ascending' ? <ChevronUp size={14} className="inline" /> : <ChevronDown size={14} className="inline" />) : ''}
+                              </th>
+                              <th onClick={() => requestSort('registry_created_at')} style={{ cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                                Actual Registry Date {sortConfig?.key === 'registry_created_at' ? (sortConfig.direction === 'ascending' ? <ChevronUp size={14} className="inline" /> : <ChevronDown size={14} className="inline" />) : ''}
+                              </th>
+                              <th>Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {sortedImpostors.filter(imp => activeDomainFilter ? imp.original_domain === activeDomainFilter : true).length === 0 ? (
+                              <tr><td colSpan="8" style={{ textAlign: 'center' }} className="subtitle">
+                                {activeDomainFilter ? `No resolving impostor domains detected for ${activeDomainFilter} yet.` : `No resolving impostor domains detected yet.`}
+                              </td></tr>
+                            ) : (
+                              sortedImpostors
+                                .filter(imp => activeDomainFilter ? imp.original_domain === activeDomainFilter : true)
+                                .map(imp => {
+                                  const confColor = imp.confidence_level > 70 ? 'var(--danger)' : (imp.confidence_level > 40 ? '#d29922' : 'var(--success)');
+                                  const isRes = imp.records && (imp.records.A || imp.records.MX || imp.records.TXT);
+                                  return (
+                                    <tr key={imp.impostor_domain}>
+                                      <td style={{ color: '#fff' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                          {punycodeToUnicode(imp.impostor_domain) !== imp.impostor_domain ? (
+                                            <>
+                                              <span style={{ fontWeight: 600 }}>{punycodeToUnicode(imp.impostor_domain)}</span>
+                                              <span className="subtitle" style={{ fontSize: '0.8rem' }}>({imp.impostor_domain})</span>
+                                            </>
+                                          ) : (
+                                            <span style={{ fontWeight: 600 }}>{imp.impostor_domain}</span>
+                                          )}
+                                          {imp.screenshot_url && (
+                                            <button onClick={() => setActiveScreenshot(imp.screenshot_url)} className="btn btn-ghost btn-sm" style={{ padding: '0 5px' }} title="View Screenshot">
+                                              <ImageIcon size={14} className="text-primary" />
+                                            </button>
+                                          )}
+                                          {imp.safebrowsing_flagged && (
+                                            <div style={{ display: 'inline-flex', alignItems: 'center', color: 'var(--danger)', marginLeft: '4px' }} title="Flagged as Malicious/Phishing by Google SafeBrowsing">
+                                              <TriangleAlert size={16} />
+                                            </div>
+                                          )}
+                                        </div>
+                                      </td>
+                                      <td className="subtitle">{imp.original_domain}</td>
+                                      <td><span style={{ color: confColor, fontWeight: 600 }}>{imp.confidence_level}%</span></td>
+                                      <td>
+                                        {imp.records.A && <span className="record-tag active">A/AAAA</span>}
+                                        {imp.records.MX && <span className="record-tag active">MX</span>}
+                                        {imp.records.TXT && <span className="record-tag active">TXT (SPF/DMARC)</span>}
+                                      </td>
+                                      <td className="subtitle" style={{ fontSize: '0.8rem' }}>
+                                        {imp.last_scanned ? imp.last_scanned.toDate().toLocaleString() : 'N/A'}
+                                      </td>
+                                      <td className="subtitle" style={{ fontSize: '0.8rem' }}>
+                                        {imp.first_detected_at ? imp.first_detected_at.toDate().toLocaleDateString() : 'N/A'}
+                                      </td>
+                                      <td className="subtitle" style={{ fontSize: '0.8rem', color: imp.registry_created_at && imp.registry_created_at !== 'Redacted/Unknown' ? 'var(--danger)' : 'var(--text-muted)' }}>
+                                        {imp.registry_created_at ? (imp.registry_created_at === 'Redacted/Unknown' ? 'Redacted' : new Date(imp.registry_created_at).toLocaleDateString()) : 'N/A'}
+                                      </td>
+                                      <td>
+                                        <button onClick={() => removeImpostor(imp.impostor_domain)} className="btn btn-ghost btn-sm" style={{ color: 'var(--danger)', padding: '5px' }} title="Remove Impostor">
+                                          <Trash2 size={16} />
+                                        </button>
+                                      </td>
+                                    </tr>
+                                  )
+                                })
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="empty-state" style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem' }}>
+                    Select a monitored domain from the sidebar to view its generated impostor matrix and resolution status.
+                  </div>
                 )}
               </div>
-
-              <div className="impostors-section mt-8">
-                <h3>
-                  {activeDomainFilter ? `Resolved Impostors for ${activeDomainFilter}` : 'All Resolved Impostors'}
-                  <span className="badge error" style={{ marginLeft: '10px' }}>
-                    {impostors.filter(imp => activeDomainFilter ? imp.original_domain === activeDomainFilter : true).length}
-                  </span>
-                  {activeDomainFilter && (
-                    <button onClick={() => setActiveDomainFilter(null)} className="btn btn-ghost btn-sm" style={{ marginLeft: '10px' }}>Clear Filter</button>
-                  )}
-                </h3>
-                <div className="table-container">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Impostor Domain</th>
-                        <th>Original</th>
-                        <th>Confidence</th>
-                        <th>Detected Records</th>
-                        <th>Last Scanned</th>
-                        <th>App Detection</th>
-                        <th>Actual Registry Date</th>
-                        <th>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {impostors.filter(imp => activeDomainFilter ? imp.original_domain === activeDomainFilter : true).length === 0 ? (
-                        <tr><td colSpan="7" style={{ textAlign: 'center' }} className="subtitle">
-                          {activeDomainFilter ? `No resolving impostor domains detected for ${activeDomainFilter} yet.` : `No resolving impostor domains detected yet.`}
-                        </td></tr>
-                      ) : (
-                        impostors
-                          .filter(imp => activeDomainFilter ? imp.original_domain === activeDomainFilter : true)
-                          .map(imp => {
-                            const confColor = imp.confidence_level > 70 ? 'var(--danger)' : (imp.confidence_level > 40 ? '#d29922' : 'var(--success)');
-                            const isRes = imp.records && (imp.records.A || imp.records.MX || imp.records.TXT);
-                            return (
-                              <tr key={imp.impostor_domain}>
-                                <td style={{ color: '#fff' }}>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    {punycodeToUnicode(imp.impostor_domain) !== imp.impostor_domain ? (
-                                      <>
-                                        <span style={{ fontWeight: 600 }}>{punycodeToUnicode(imp.impostor_domain)}</span>
-                                        <span className="subtitle" style={{ fontSize: '0.8rem' }}>({imp.impostor_domain})</span>
-                                      </>
-                                    ) : (
-                                      <span style={{ fontWeight: 600 }}>{imp.impostor_domain}</span>
-                                    )}
-                                    {imp.screenshot_url && (
-                                      <button onClick={() => setActiveScreenshot(imp.screenshot_url)} className="btn btn-ghost btn-sm" style={{ padding: '0 5px' }} title="View Screenshot">
-                                        <ImageIcon size={14} className="text-primary" />
-                                      </button>
-                                    )}
-                                    {imp.safebrowsing_flagged && (
-                                      <div style={{ display: 'inline-flex', alignItems: 'center', color: 'var(--danger)', marginLeft: '4px' }} title="Flagged as Malicious/Phishing by Google SafeBrowsing">
-                                        <TriangleAlert size={16} />
-                                      </div>
-                                    )}
-                                  </div>
-                                </td>
-                                <td className="subtitle">{imp.original_domain}</td>
-                                <td><span style={{ color: confColor, fontWeight: 600 }}>{imp.confidence_level}%</span></td>
-                                <td>
-                                  {imp.records.A && <span className="record-tag active">A/AAAA</span>}
-                                  {imp.records.MX && <span className="record-tag active">MX</span>}
-                                  {imp.records.TXT && <span className="record-tag active">TXT (SPF/DMARC)</span>}
-                                </td>
-                                <td className="subtitle" style={{ fontSize: '0.8rem' }}>
-                                  {imp.last_scanned ? imp.last_scanned.toDate().toLocaleString() : 'N/A'}
-                                </td>
-                                <td className="subtitle" style={{ fontSize: '0.8rem' }}>
-                                  {imp.first_detected_at ? imp.first_detected_at.toDate().toLocaleDateString() : 'N/A'}
-                                </td>
-                                <td className="subtitle" style={{ fontSize: '0.8rem', color: imp.registry_created_at && imp.registry_created_at !== 'Redacted/Unknown' ? 'var(--danger)' : 'var(--text-muted)' }}>
-                                  {imp.registry_created_at ? (imp.registry_created_at === 'Redacted/Unknown' ? 'Redacted' : new Date(imp.registry_created_at).toLocaleDateString()) : 'N/A'}
-                                </td>
-                                <td>
-                                  <button onClick={() => removeImpostor(imp.impostor_domain)} className="btn btn-ghost btn-sm" style={{ color: 'var(--danger)', padding: '5px' }} title="Remove Impostor">
-                                    <Trash2 size={16} />
-                                  </button>
-                                </td>
-                              </tr>
-                            )
-                          })
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </section>
+            </div>
           )}
 
           {/* Admin View */}
@@ -696,16 +779,22 @@ export default function App() {
                 <table>
                   <thead>
                     <tr>
-                      <th>Domain</th>
-                      <th>Tracking Users (Emails)</th>
-                      <th>Added Date</th>
+                      <th onClick={() => requestAdminSort('domain')} style={{ cursor: 'pointer' }}>
+                        Domain {adminSortConfig?.key === 'domain' ? (adminSortConfig.direction === 'ascending' ? <ChevronUp size={14} className="inline" /> : <ChevronDown size={14} className="inline" />) : ''}
+                      </th>
+                      <th onClick={() => requestAdminSort('emails')} style={{ cursor: 'pointer' }}>
+                        Tracking Users (Emails) {adminSortConfig?.key === 'emails' ? (adminSortConfig.direction === 'ascending' ? <ChevronUp size={14} className="inline" /> : <ChevronDown size={14} className="inline" />) : ''}
+                      </th>
+                      <th onClick={() => requestAdminSort('added')} style={{ cursor: 'pointer' }}>
+                        Added Date {adminSortConfig?.key === 'added' ? (adminSortConfig.direction === 'ascending' ? <ChevronUp size={14} className="inline" /> : <ChevronDown size={14} className="inline" />) : ''}
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
-                    {adminData.length === 0 ? (
+                    {sortedAdminData.length === 0 ? (
                       <tr><td colSpan="3" style={{ textAlign: 'center' }} className="subtitle">No domains registered across the system.</td></tr>
                     ) : (
-                      adminData.map((ad, idx) => (
+                      sortedAdminData.map((ad, idx) => (
                         <tr key={idx}>
                           <td style={{ fontWeight: 500 }}>{ad.domain}</td>
                           <td className="subtitle">{ad.emails}</td>
