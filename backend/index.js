@@ -3,7 +3,7 @@ import cron from 'node-cron';
 import admin from 'firebase-admin';
 import { generateImpostors } from './generator.js';
 import { scanDomain, getRegistrationDate } from './scanner.js';
-import { takeScreenshot } from './screenshot.js';
+import { takeScreenshot, extractOriginalDomainFeatures } from './screenshot.js';
 
 // ----------------------------------------------------
 // 1. Firebase Admin Initialization
@@ -71,6 +71,15 @@ if (db) {
 
                 // Mark as processed immediately so concurrent/future restarts don't re-trigger
                 await change.doc.ref.update({ processed_by_worker: true });
+
+                // Extract baseline visual features
+                const features = await extractOriginalDomainFeatures(domainStr);
+                if (features.favicon_url || features.logo_url) {
+                    await change.doc.ref.update({
+                        original_favicon: features.favicon_url,
+                        original_logo: features.logo_url
+                    });
+                }
 
                 const impostors = generateImpostors(domainStr);
 
@@ -150,6 +159,7 @@ if (db) {
                     console.log(`[ALERT] Newly Resolving Impostor Found during ON-DEMAND scan: ${impostorDomain}`);
                     updatePayload.first_detected_at = admin.firestore.FieldValue.serverTimestamp();
                     updatePayload.needs_screenshot = true;
+                    updatePayload.screenshot_attempted = false;
                 }
 
                 if (isResolving && !data.registry_created_at) {
@@ -210,6 +220,7 @@ cron.schedule('0 * * * *', async () => {
                 console.log(`[ALERT] Newly Resolving Impostor Found during CRON: ${impostorDomain}`);
                 updatePayload.first_detected_at = admin.firestore.FieldValue.serverTimestamp();
                 updatePayload.needs_screenshot = true;
+                updatePayload.screenshot_attempted = false;
             }
 
             if (isResolving && !data.registry_created_at) {
@@ -246,7 +257,10 @@ cron.schedule('* * * * *', async () => {
             const domain = doc.data().impostor_domain;
 
             console.log(`[SCREENSHOT QUEUE] Processing ${domain}...`);
-            await doc.ref.update({ needs_screenshot: admin.firestore.FieldValue.delete() });
+            await doc.ref.update({
+                needs_screenshot: admin.firestore.FieldValue.delete(),
+                screenshot_attempted: true
+            });
 
             const { url, is_malicious } = await takeScreenshot(domain);
 

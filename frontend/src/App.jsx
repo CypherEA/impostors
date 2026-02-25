@@ -569,8 +569,13 @@ export default function App() {
                       onClick={() => setActiveDomainFilter(activeDomainFilter === d.domain ? null : d.domain)}
                       style={{ cursor: 'pointer', position: 'relative' }}
                     >
-                      <div className="card-title">
-                        <span>{d.domain}</span>
+                      <div className="card-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          {d.original_favicon && (
+                            <img src={d.original_favicon} alt="Favicon" style={{ width: '16px', height: '16px', borderRadius: '2px' }} />
+                          )}
+                          <span>{d.domain}</span>
+                        </div>
                         <div style={{ display: 'flex', gap: '5px' }}>
                           <span className="badge" style={{ background: 'var(--success-bg)', color: 'var(--success)' }}>Active</span>
                           <button onClick={(e) => removeMonitoredDomain(e, d)} className="btn btn-ghost btn-sm" title="Remove Domain" style={{ padding: '0 5px', minWidth: '0' }}>
