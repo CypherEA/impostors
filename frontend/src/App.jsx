@@ -472,8 +472,8 @@ export default function App() {
 
       <div className="app-container">
         <header className="navbar">
-          <div className="logo">
-            <ShieldCheck className="text-primary" />
+          <div className="logo" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <img src="/favicon.png" alt="Domain Monitor Logo" style={{ width: '48px', height: '48px' }} />
             <div style={{ display: 'flex', flexDirection: 'column', lineHeight: '1.1' }}>
               <span style={{ fontSize: '1.3rem' }}>Domain Monitor</span>
               <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>by BoilermakerGRC</span>
