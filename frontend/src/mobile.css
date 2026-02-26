@@ -1,0 +1,299 @@
+/* Mobile Companion App Specific Styles */
+.mobile-app {
+    width: 100%;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background-color: #0d1117;
+    color: #c9d1d9;
+    overflow: hidden;
+    font-family: 'Inter', sans-serif;
+}
+
+.mobile-header {
+    padding: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(22, 27, 34, 0.8);
+    backdrop-filter: blur(10px);
+    z-index: 10;
+}
+
+.mobile-header .logo {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+
+.mobile-header .logo img {
+    width: 28px;
+    height: 28px;
+}
+
+.mobile-main {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    padding-bottom: 70px;
+    /* Space for bottom tab bar */
+}
+
+.mobile-main.centered {
+    justify-content: center;
+    align-items: center;
+    padding: 1rem;
+}
+
+.mobile-section {
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.flex-1 {
+    flex: 1;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.section-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: #fff;
+}
+
+.mobile-add-form {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.mobile-add-form input {
+    flex: 1;
+    background: rgba(13, 17, 23, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: white;
+    padding: 0.75rem;
+    border-radius: 8px;
+}
+
+.mobile-add-form button {
+    padding: 0 1rem;
+    border-radius: 8px;
+}
+
+/* Horizontal Swipeable Chips */
+.chips-container {
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
+    scrollbar-width: none;
+    /* Firefox */
+}
+
+.chips-container::-webkit-scrollbar {
+    display: none;
+    /* Safari and Chrome */
+}
+
+.chip {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    white-space: nowrap;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.chip.active {
+    background: rgba(88, 166, 255, 0.15);
+    border-color: #58a6ff;
+    color: #58a6ff;
+}
+
+.chip-icon {
+    width: 14px;
+    height: 14px;
+    border-radius: 2px;
+}
+
+.chip-delete {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    margin-left: 0.2rem;
+}
+
+.chip-delete:hover {
+    background: rgba(248, 81, 73, 0.3);
+    color: #f85149;
+}
+
+/* Vertical Impostor Cards */
+.cards-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+}
+
+.impostor-card {
+    background: rgba(22, 27, 34, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+}
+
+.card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.domain-info h4 {
+    margin: 0;
+    color: #fff;
+    font-size: 1.05rem;
+    word-break: break-all;
+}
+
+.puny-sub {
+    font-size: 0.75rem;
+    color: #8b949e;
+    display: block;
+}
+
+.original-ref {
+    font-size: 0.75rem;
+    color: #8b949e;
+    margin-top: 0.2rem;
+}
+
+.confidence-badge {
+    font-weight: 700;
+    font-size: 0.9rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 6px;
+}
+
+.confidence-badge.high {
+    color: #f85149;
+    background: rgba(248, 81, 73, 0.1);
+}
+
+.confidence-badge.med {
+    color: #d29922;
+    background: rgba(210, 153, 34, 0.1);
+}
+
+.confidence-badge.low {
+    color: #2ea043;
+    background: rgba(46, 160, 67, 0.1);
+}
+
+.card-records {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+.card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    padding-top: 0.5rem;
+    font-size: 0.75rem;
+    color: #8b949e;
+}
+
+/* Bottom Tab Bar */
+.bottom-tab-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 65px;
+    background: rgba(13, 17, 23, 0.95);
+    backdrop-filter: blur(10px);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    z-index: 20;
+}
+
+.tab-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
+    background: none;
+    border: none;
+    color: #8b949e;
+    font-size: 0.7rem;
+    cursor: pointer;
+    padding: 0.5rem;
+    flex: 1;
+}
+
+.tab-btn.active {
+    color: #58a6ff;
+}
+
+/* User Profile Settings */
+.user-profile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    background: rgba(22, 27, 34, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 2rem;
+    border-radius: 16px;
+    width: 100%;
+    max-width: 400px;
+}
+
+.avatar {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: #58a6ff;
+    color: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+.role-badge {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 0.2rem 0.6rem;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+}
