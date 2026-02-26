@@ -429,7 +429,7 @@ export default function App() {
         <div className="modal-overlay">
           <div className="modal-content">
             <div className="modal-header">
-              <h3>Generated Potentials for: <span className="text-primary">{popupDomain}</span></h3>
+              <h3>Domain Permutations for: <span className="text-primary">{popupDomain}</span></h3>
               <button onClick={() => setIsPopupOpen(false)} className="nav-btn"><X size={24} /></button>
             </div>
 
@@ -469,7 +469,7 @@ export default function App() {
                   </thead>
                   <tbody>
                     {sortedPopupData.length === 0 ? (
-                      <tr><td colSpan="6" className="empty-state">No generated potentials found yet.</td></tr>
+                      <tr><td colSpan="6" className="empty-state">No domain permutations found yet.</td></tr>
                     ) : (
                       sortedPopupData.map(d => {
                         const confColor = d.confidence_level > 70 ? 'var(--danger)' : (d.confidence_level > 40 ? '#d29922' : 'var(--success)');
@@ -636,17 +636,32 @@ export default function App() {
                         className={`sidebar-item ${activeDomainFilter === d.domain ? 'active' : ''}`}
                         onClick={() => setActiveDomainFilter(activeDomainFilter === d.domain ? null : d.domain)}
                       >
-                        <div className="sidebar-item-content">
-                          {d.original_favicon ? (
-                            <img src={d.original_favicon} alt="" style={{ width: '16px', height: '16px', borderRadius: '2px' }} />
-                          ) : (
-                            <div style={{ width: '16px', height: '16px', background: 'var(--border-color)', borderRadius: '2px' }}></div>
-                          )}
-                          <span className="sidebar-item-domain">{d.domain}</span>
+                        <div className="sidebar-item-top">
+                          <div className="sidebar-item-content">
+                            {d.original_favicon ? (
+                              <img src={d.original_favicon} alt="" style={{ width: '16px', height: '16px', borderRadius: '2px' }} />
+                            ) : (
+                              <div style={{ width: '16px', height: '16px', background: 'var(--border-color)', borderRadius: '2px' }}></div>
+                            )}
+                            <span className="sidebar-item-domain">{d.domain}</span>
+                          </div>
+                          <button onClick={(e) => { e.stopPropagation(); removeMonitoredDomain(e, d); }} className="btn btn-ghost btn-sm" title="Remove Domain" style={{ padding: '0 5px', minWidth: '0' }}>
+                            <Trash2 size={14} color="var(--danger)" />
+                          </button>
                         </div>
-                        <button onClick={(e) => removeMonitoredDomain(e, d)} className="btn btn-ghost btn-sm" title="Remove Domain" style={{ padding: '0 5px', minWidth: '0' }}>
-                          <Trash2 size={14} color="var(--danger)" />
-                        </button>
+                        <div className="sidebar-item-actions">
+                          <span className="badge" style={{ background: 'rgba(255,255,255,0.1)', color: 'var(--text-main)', fontSize: '0.65rem' }}>
+                            {impostors.filter(imp => imp.original_domain === d.domain).length} Resolving Impostors
+                          </span>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); openDomainPopup(d.domain); }}
+                            className="btn btn-ghost btn-sm"
+                            title="View Domain Permutations"
+                            style={{ padding: '0 5px', color: 'var(--primary)' }}
+                          >
+                            <Eye size={16} />
+                          </button>
+                        </div>
                       </div>
                     ))
                   )}
@@ -669,7 +684,7 @@ export default function App() {
                       onClick={(e) => { e.stopPropagation(); openDomainPopup(activeDomainFilter); }}
                       className="btn btn-secondary"
                     >
-                      <Eye size={16} className="inline mr-2 -mt-1" /> View Generation Matrix
+                      <Eye size={16} className="inline mr-2 -mt-1" /> View Domain Permutations
                     </button>
                   )}
                 </div>

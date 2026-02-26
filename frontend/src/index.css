@@ -453,7 +453,7 @@ tbody tr:hover {
 
 .modal-content {
   width: 90vw;
-  max-width: 900px;
+  max-width: 1200px;
   background: var(--panel-bg);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
@@ -543,22 +543,31 @@ input[type="checkbox"] {
 
 .sidebar-item {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.75rem 1rem;
+  flex-direction: column;
+  padding: 1rem;
   border-radius: var(--radius-md);
   cursor: pointer;
   transition: var(--transition);
-  border: 1px solid transparent;
+  border: 1px solid var(--border-color);
+  background: rgba(255, 255, 255, 0.02);
+  gap: 0.75rem;
 }
 
 .sidebar-item:hover {
   background: rgba(255, 255, 255, 0.05);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .sidebar-item.active {
   background: var(--primary-ghost);
   border-color: rgba(88, 166, 255, 0.3);
+}
+
+.sidebar-item-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .sidebar-item-content {
@@ -574,6 +583,15 @@ input[type="checkbox"] {
   font-weight: 500;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-size: 1rem;
+}
+
+.sidebar-item-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  padding-top: 0.5rem;
 }
 
 .mobile-domain-selector {
