@@ -561,7 +561,7 @@ export default function App() {
           )}
         </header>
 
-        <main>
+        <main style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
           {/* Auth View */}
           {activeView === 'auth' && (
             <section className="view auth-box">
