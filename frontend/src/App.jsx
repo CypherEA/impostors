@@ -90,6 +90,7 @@ export default function App() {
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [popupDomain, setPopupDomain] = useState(null);
   const [popupData, setPopupData] = useState([]);
+  const { items: sortedPopupData, requestSort: requestPopupSort, sortConfig: popupSortConfig } = useSortableData(popupData, { key: 'confidence_level', direction: 'descending' });
   const [isPopupLoading, setIsPopupLoading] = useState(false);
   const [selectedImpostors, setSelectedImpostors] = useState(new Set());
   const [activeScreenshot, setActiveScreenshot] = useState(null);
@@ -452,19 +453,25 @@ export default function App() {
                 <table>
                   <thead>
                     <tr>
-                      <th style={{ width: '40px' }}><input type="checkbox" onChange={toggleAllSelected} checked={popupData.length > 0 && selectedImpostors.size === popupData.length} /></th>
-                      <th>Impostor Domain</th>
-                      <th>Confidence</th>
+                      <th style={{ width: '40px' }}><input type="checkbox" onChange={toggleAllSelected} checked={sortedPopupData.length > 0 && selectedImpostors.size === sortedPopupData.length} /></th>
+                      <th onClick={() => requestPopupSort('impostor_domain')} style={{ cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                        Impostor Domain {popupSortConfig?.key === 'impostor_domain' ? (popupSortConfig.direction === 'ascending' ? <ChevronUp size={14} className="inline" /> : <ChevronDown size={14} className="inline" />) : ''}
+                      </th>
+                      <th onClick={() => requestPopupSort('confidence_level')} style={{ cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                        Confidence {popupSortConfig?.key === 'confidence_level' ? (popupSortConfig.direction === 'ascending' ? <ChevronUp size={14} className="inline" /> : <ChevronDown size={14} className="inline" />) : ''}
+                      </th>
                       <th>Is Resolving</th>
-                      <th>Last Checked</th>
+                      <th onClick={() => requestPopupSort('last_scanned')} style={{ cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                        Last Checked {popupSortConfig?.key === 'last_scanned' ? (popupSortConfig.direction === 'ascending' ? <ChevronUp size={14} className="inline" /> : <ChevronDown size={14} className="inline" />) : ''}
+                      </th>
                       <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {popupData.length === 0 ? (
-                      <tr><td colSpan="5" className="empty-state">No generated potentials found yet.</td></tr>
+                    {sortedPopupData.length === 0 ? (
+                      <tr><td colSpan="6" className="empty-state">No generated potentials found yet.</td></tr>
                     ) : (
-                      popupData.map(d => {
+                      sortedPopupData.map(d => {
                         const confColor = d.confidence_level > 70 ? 'var(--danger)' : (d.confidence_level > 40 ? '#d29922' : 'var(--success)');
                         const isRes = d.records && (d.records.A || d.records.MX || d.records.TXT);
                         return (
@@ -648,124 +655,122 @@ export default function App() {
 
               {/* Main Content (Detail) */}
               <div className="main-content">
-                {activeDomainFilter ? (
-                  <>
-                    <div className="detail-header">
-                      <div>
-                        <h2>Monitoring Detail: {activeDomainFilter}</h2>
-                        <span className="badge mt-2" style={{ background: 'var(--success-bg)', color: 'var(--success)', display: 'inline-block' }}>Active Tracking</span>
-                      </div>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); openDomainPopup(activeDomainFilter); }}
-                        className="btn btn-secondary"
-                      >
-                        <Eye size={16} className="inline mr-2 -mt-1" /> View Generation Matrix
-                      </button>
-                    </div>
-
-                    <div className="impostors-section">
-                      <h3 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        Resolved Impostors for {activeDomainFilter}
-                        <span className="badge error">
-                          {impostors.filter(imp => imp.original_domain === activeDomainFilter).length}
-                        </span>
-                      </h3>
-                      <div className="table-container">
-                        <table>
-                          <thead>
-                            <tr>
-                              <th onClick={() => requestSort('impostor_domain')} style={{ cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                                Impostor Domain {sortConfig?.key === 'impostor_domain' ? (sortConfig.direction === 'ascending' ? <ChevronUp size={14} className="inline" /> : <ChevronDown size={14} className="inline" />) : ''}
-                              </th>
-                              <th onClick={() => requestSort('original_domain')} style={{ cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                                Original {sortConfig?.key === 'original_domain' ? (sortConfig.direction === 'ascending' ? <ChevronUp size={14} className="inline" /> : <ChevronDown size={14} className="inline" />) : ''}
-                              </th>
-                              <th onClick={() => requestSort('confidence_level')} style={{ cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                                Confidence {sortConfig?.key === 'confidence_level' ? (sortConfig.direction === 'ascending' ? <ChevronUp size={14} className="inline" /> : <ChevronDown size={14} className="inline" />) : ''}
-                              </th>
-                              <th>Detected Records</th>
-                              <th onClick={() => requestSort('last_scanned')} style={{ cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                                Last Scanned {sortConfig?.key === 'last_scanned' ? (sortConfig.direction === 'ascending' ? <ChevronUp size={14} className="inline" /> : <ChevronDown size={14} className="inline" />) : ''}
-                              </th>
-                              <th onClick={() => requestSort('first_detected_at')} style={{ cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                                App Detection {sortConfig?.key === 'first_detected_at' ? (sortConfig.direction === 'ascending' ? <ChevronUp size={14} className="inline" /> : <ChevronDown size={14} className="inline" />) : ''}
-                              </th>
-                              <th onClick={() => requestSort('registry_created_at')} style={{ cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                                Actual Registry Date {sortConfig?.key === 'registry_created_at' ? (sortConfig.direction === 'ascending' ? <ChevronUp size={14} className="inline" /> : <ChevronDown size={14} className="inline" />) : ''}
-                              </th>
-                              <th>Actions</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {sortedImpostors.filter(imp => activeDomainFilter ? imp.original_domain === activeDomainFilter : true).length === 0 ? (
-                              <tr><td colSpan="8" style={{ textAlign: 'center' }} className="subtitle">
-                                {activeDomainFilter ? `No resolving impostor domains detected for ${activeDomainFilter} yet.` : `No resolving impostor domains detected yet.`}
-                              </td></tr>
-                            ) : (
-                              sortedImpostors
-                                .filter(imp => activeDomainFilter ? imp.original_domain === activeDomainFilter : true)
-                                .map(imp => {
-                                  const confColor = imp.confidence_level > 70 ? 'var(--danger)' : (imp.confidence_level > 40 ? '#d29922' : 'var(--success)');
-                                  const isRes = imp.records && (imp.records.A || imp.records.MX || imp.records.TXT);
-                                  return (
-                                    <tr key={imp.impostor_domain}>
-                                      <td style={{ color: '#fff' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                          {punycodeToUnicode(imp.impostor_domain) !== imp.impostor_domain ? (
-                                            <>
-                                              <span style={{ fontWeight: 600 }}>{punycodeToUnicode(imp.impostor_domain)}</span>
-                                              <span className="subtitle" style={{ fontSize: '0.8rem' }}>({imp.impostor_domain})</span>
-                                            </>
-                                          ) : (
-                                            <span style={{ fontWeight: 600 }}>{imp.impostor_domain}</span>
-                                          )}
-                                          {imp.screenshot_url && (
-                                            <button onClick={() => setActiveScreenshot(imp.screenshot_url)} className="btn btn-ghost btn-sm" style={{ padding: '0 5px' }} title="View Screenshot">
-                                              <ImageIcon size={14} className="text-primary" />
-                                            </button>
-                                          )}
-                                          {imp.safebrowsing_flagged && (
-                                            <div style={{ display: 'inline-flex', alignItems: 'center', color: 'var(--danger)', marginLeft: '4px' }} title="Flagged as Malicious/Phishing by Google SafeBrowsing">
-                                              <TriangleAlert size={16} />
-                                            </div>
-                                          )}
-                                        </div>
-                                      </td>
-                                      <td className="subtitle">{imp.original_domain}</td>
-                                      <td><span style={{ color: confColor, fontWeight: 600 }}>{imp.confidence_level}%</span></td>
-                                      <td>
-                                        {imp.records.A && <span className="record-tag active">A/AAAA</span>}
-                                        {imp.records.MX && <span className="record-tag active">MX</span>}
-                                        {imp.records.TXT && <span className="record-tag active">TXT (SPF/DMARC)</span>}
-                                      </td>
-                                      <td className="subtitle" style={{ fontSize: '0.8rem' }}>
-                                        {imp.last_scanned ? imp.last_scanned.toDate().toLocaleString() : 'N/A'}
-                                      </td>
-                                      <td className="subtitle" style={{ fontSize: '0.8rem' }}>
-                                        {imp.first_detected_at ? imp.first_detected_at.toDate().toLocaleDateString() : 'N/A'}
-                                      </td>
-                                      <td className="subtitle" style={{ fontSize: '0.8rem', color: imp.registry_created_at && imp.registry_created_at !== 'Redacted/Unknown' ? 'var(--danger)' : 'var(--text-muted)' }}>
-                                        {imp.registry_created_at ? (imp.registry_created_at === 'Redacted/Unknown' ? 'Redacted' : new Date(imp.registry_created_at).toLocaleDateString()) : 'N/A'}
-                                      </td>
-                                      <td>
-                                        <button onClick={() => removeImpostor(imp.impostor_domain)} className="btn btn-ghost btn-sm" style={{ color: 'var(--danger)', padding: '5px' }} title="Remove Impostor">
-                                          <Trash2 size={16} />
-                                        </button>
-                                      </td>
-                                    </tr>
-                                  )
-                                })
-                            )}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  </>
-                ) : (
-                  <div className="empty-state" style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem' }}>
-                    Select a monitored domain from the sidebar to view its generated impostor matrix and resolution status.
+                <div className="detail-header" style={{ flexShrink: 0 }}>
+                  <div>
+                    <h2>{activeDomainFilter ? `Monitoring Detail: ${activeDomainFilter}` : 'Global Impostor View'}</h2>
+                    {activeDomainFilter ? (
+                      <span className="badge mt-2" style={{ background: 'var(--success-bg)', color: 'var(--success)', display: 'inline-block' }}>Active Tracking</span>
+                    ) : (
+                      <span className="badge mt-2" style={{ background: 'var(--primary-ghost)', color: 'var(--primary)', display: 'inline-block' }}>All Domains</span>
+                    )}
                   </div>
-                )}
+                  {activeDomainFilter && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); openDomainPopup(activeDomainFilter); }}
+                      className="btn btn-secondary"
+                    >
+                      <Eye size={16} className="inline mr-2 -mt-1" /> View Generation Matrix
+                    </button>
+                  )}
+                </div>
+
+                <div className="impostors-section" style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+                  <h3 style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0, paddingBottom: '10px' }}>
+                    {activeDomainFilter ? `Resolved Impostors for ${activeDomainFilter}` : 'All Resolved Impostors (Global)'}
+                    <span className="badge error">
+                      {impostors.filter(imp => activeDomainFilter ? imp.original_domain === activeDomainFilter : true).length}
+                    </span>
+                  </h3>
+                  <div className="table-container" style={{ flex: 1, overflowY: 'auto' }}>
+                    <table style={{ margin: 0 }}>
+                      <thead style={{ position: 'sticky', top: 0, background: 'var(--panel-bg)', zIndex: 10, backdropFilter: 'blur(10px)' }}>
+                        <tr>
+                          <th onClick={() => requestSort('impostor_domain')} style={{ cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                            Impostor Domain {sortConfig?.key === 'impostor_domain' ? (sortConfig.direction === 'ascending' ? <ChevronUp size={14} className="inline" /> : <ChevronDown size={14} className="inline" />) : ''}
+                          </th>
+                          <th onClick={() => requestSort('original_domain')} style={{ cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                            Original {sortConfig?.key === 'original_domain' ? (sortConfig.direction === 'ascending' ? <ChevronUp size={14} className="inline" /> : <ChevronDown size={14} className="inline" />) : ''}
+                          </th>
+                          <th onClick={() => requestSort('confidence_level')} style={{ cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                            Confidence {sortConfig?.key === 'confidence_level' ? (sortConfig.direction === 'ascending' ? <ChevronUp size={14} className="inline" /> : <ChevronDown size={14} className="inline" />) : ''}
+                          </th>
+                          <th>Detected Records</th>
+                          <th onClick={() => requestSort('last_scanned')} style={{ cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                            Last Scanned {sortConfig?.key === 'last_scanned' ? (sortConfig.direction === 'ascending' ? <ChevronUp size={14} className="inline" /> : <ChevronDown size={14} className="inline" />) : ''}
+                          </th>
+                          <th onClick={() => requestSort('first_detected_at')} style={{ cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                            App Detection {sortConfig?.key === 'first_detected_at' ? (sortConfig.direction === 'ascending' ? <ChevronUp size={14} className="inline" /> : <ChevronDown size={14} className="inline" />) : ''}
+                          </th>
+                          <th onClick={() => requestSort('registry_created_at')} style={{ cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                            Actual Registry Date {sortConfig?.key === 'registry_created_at' ? (sortConfig.direction === 'ascending' ? <ChevronUp size={14} className="inline" /> : <ChevronDown size={14} className="inline" />) : ''}
+                          </th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {sortedImpostors.filter(imp => activeDomainFilter ? imp.original_domain === activeDomainFilter : true).length === 0 ? (
+                          <tr><td colSpan="8" style={{ textAlign: 'center' }} className="subtitle">
+                            {activeDomainFilter ? `No resolving impostor domains detected for ${activeDomainFilter} yet.` : `No resolving impostor domains detected yet.`}
+                          </td></tr>
+                        ) : (
+                          sortedImpostors
+                            .filter(imp => activeDomainFilter ? imp.original_domain === activeDomainFilter : true)
+                            .map(imp => {
+                              const confColor = imp.confidence_level > 70 ? 'var(--danger)' : (imp.confidence_level > 40 ? '#d29922' : 'var(--success)');
+                              const isRes = imp.records && (imp.records.A || imp.records.MX || imp.records.TXT);
+                              return (
+                                <tr key={imp.impostor_domain}>
+                                  <td style={{ color: '#fff' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                      {punycodeToUnicode(imp.impostor_domain) !== imp.impostor_domain ? (
+                                        <>
+                                          <span style={{ fontWeight: 600 }}>{punycodeToUnicode(imp.impostor_domain)}</span>
+                                          <span className="subtitle" style={{ fontSize: '0.8rem' }}>({imp.impostor_domain})</span>
+                                        </>
+                                      ) : (
+                                        <span style={{ fontWeight: 600 }}>{imp.impostor_domain}</span>
+                                      )}
+                                      {imp.screenshot_url && (
+                                        <button onClick={() => setActiveScreenshot(imp.screenshot_url)} className="btn btn-ghost btn-sm" style={{ padding: '0 5px' }} title="View Screenshot">
+                                          <ImageIcon size={14} className="text-primary" />
+                                        </button>
+                                      )}
+                                      {imp.safebrowsing_flagged && (
+                                        <div style={{ display: 'inline-flex', alignItems: 'center', color: 'var(--danger)', marginLeft: '4px' }} title="Flagged as Malicious/Phishing by Google SafeBrowsing">
+                                          <TriangleAlert size={16} />
+                                        </div>
+                                      )}
+                                    </div>
+                                  </td>
+                                  <td className="subtitle">{imp.original_domain}</td>
+                                  <td><span style={{ color: confColor, fontWeight: 600 }}>{imp.confidence_level}%</span></td>
+                                  <td>
+                                    {imp.records.A && <span className="record-tag active">A/AAAA</span>}
+                                    {imp.records.MX && <span className="record-tag active">MX</span>}
+                                    {imp.records.TXT && <span className="record-tag active">TXT (SPF/DMARC)</span>}
+                                  </td>
+                                  <td className="subtitle" style={{ fontSize: '0.8rem' }}>
+                                    {imp.last_scanned ? imp.last_scanned.toDate().toLocaleString() : 'N/A'}
+                                  </td>
+                                  <td className="subtitle" style={{ fontSize: '0.8rem' }}>
+                                    {imp.first_detected_at ? imp.first_detected_at.toDate().toLocaleDateString() : 'N/A'}
+                                  </td>
+                                  <td className="subtitle" style={{ fontSize: '0.8rem', color: imp.registry_created_at && imp.registry_created_at !== 'Redacted/Unknown' ? 'var(--danger)' : 'var(--text-muted)' }}>
+                                    {imp.registry_created_at ? (imp.registry_created_at === 'Redacted/Unknown' ? 'Redacted' : new Date(imp.registry_created_at).toLocaleDateString()) : 'N/A'}
+                                  </td>
+                                  <td>
+                                    <button onClick={() => removeImpostor(imp.impostor_domain)} className="btn btn-ghost btn-sm" style={{ color: 'var(--danger)', padding: '5px' }} title="Remove Impostor">
+                                      <Trash2 size={16} />
+                                    </button>
+                                  </td>
+                                </tr>
+                              )
+                            })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               </div>
             </div>
           )}
