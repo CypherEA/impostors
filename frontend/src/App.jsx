@@ -650,8 +650,8 @@ export default function App() {
                           </button>
                         </div>
                         <div className="sidebar-item-actions">
-                          <span className="badge" style={{ background: 'rgba(255,255,255,0.1)', color: 'var(--text-main)', fontSize: '0.65rem' }}>
-                            {impostors.filter(imp => imp.original_domain === d.domain).length} Resolving Impostors
+                          <span className="badge error" style={{ padding: '0.2rem 0.5rem' }}>
+                            {impostors.filter(imp => imp.original_domain === d.domain).length}
                           </span>
                           <button
                             onClick={(e) => { e.stopPropagation(); openDomainPopup(d.domain); }}
