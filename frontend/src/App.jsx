@@ -12,14 +12,14 @@ import {
   arrayUnion, arrayRemove, deleteDoc, query, where, onSnapshot, serverTimestamp
 } from "firebase/firestore";
 import { auth, googleProvider, db } from './firebase';
-import punycode from 'punycode/';
+import { toUnicode } from 'idna-uts46-hx';
 
 // Real Punycode Decoder using NPM package
 function punycodeToUnicode(domain) {
   if (!domain.includes('xn--')) return domain;
 
   try {
-    return punycode.toUnicode(domain);
+    return toUnicode(domain);
   } catch (e) {
     return domain;
   }

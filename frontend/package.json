@@ -11,8 +11,8 @@
   },
   "dependencies": {
     "firebase": "^12.9.0",
+    "idna-uts46-hx": "^6.1.1",
     "lucide-react": "^0.575.0",
-    "punycode": "^2.3.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.13.0"
